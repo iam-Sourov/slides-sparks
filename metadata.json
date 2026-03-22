@@ -1,0 +1,5 @@
+{
+  "name": "fuck",
+  "description": "A robust SPA for converting custom HTML/Tailwind snippets into high-quality PDF or PowerPoint presentations with real-time sandboxed previews.",
+  "requestFramePermissions": []
+}
