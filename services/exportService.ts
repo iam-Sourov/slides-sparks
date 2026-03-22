@@ -216,33 +216,58 @@ const rasterizeFontIconToDataUrl = (element: HTMLElement): string | undefined =>
   } else {
     // Strip quotes from evaluated computed styles (e.g. '"\f1ec"' -> '\f1ec')
     content = content.replace(/^["']|["']$/g, '');
+    
+    // Convert literally escaped sequences back to core Unicode characters for accurate Canvas painting
+    if (content.startsWith('\\')) {
+      const hex = content.replace(/^\\u|^\\/, '');
+      if (hex.length >= 4) {
+        content = String.fromCharCode(parseInt(hex, 16));
+      }
+    }
   }
 
   if (!content) return undefined;
 
   const canvas = document.createElement('canvas');
-  const scale = 4;
-  const size = parseFloat(compStyle.fontSize) || 16;
-  const rect = element.getBoundingClientRect();
-  const width = Math.max(rect.width, size);
-  const height = Math.max(rect.height, size);
+  // Hide strictly from user sight while computing
+  canvas.style.position = 'absolute';
+  canvas.style.opacity = '0';
+  canvas.style.pointerEvents = 'none';
+  canvas.style.left = '-9999px';
+  document.body.appendChild(canvas);
 
-  canvas.width = width * scale;
-  canvas.height = height * scale;
-  const ctx = canvas.getContext('2d');
+  try {
+    const scale = 4;
+    const size = parseFloat(compStyle.fontSize) || 16;
+    const rect = element.getBoundingClientRect();
+    const width = Math.max(rect.width, size);
+    const height = Math.max(rect.height, size);
 
-  if (!ctx) return undefined;
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    const ctx = canvas.getContext('2d');
 
-  ctx.scale(scale, scale);
-  // Reconstruct exact WebFont syntax explicitly mapping to the loaded document buffer
-  ctx.font = `${compStyle.fontWeight} ${size}px ${compStyle.fontFamily}`;
-  ctx.fillStyle = compStyle.color;
-  ctx.textBaseline = 'middle';
-  ctx.textAlign = 'center';
+    if (!ctx) return undefined;
 
-  ctx.fillText(content, width / 2, height / 2);
+    ctx.scale(scale, scale);
+    
+    // Explicitly guarantee wrapped spaces for strict CSS compliant canvas fonts
+    const finalFontFamily = compStyle.fontFamily.includes('"') || compStyle.fontFamily.includes("'") 
+        ? compStyle.fontFamily 
+        : `"${compStyle.fontFamily}"`;
+        
+    // Reconstruct exact WebFont syntax explicitly mapping to the loaded document buffer
+    ctx.font = `${compStyle.fontWeight || '900'} ${size}px ${finalFontFamily}`;
+    ctx.fillStyle = compStyle.color;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
 
-  return canvas.toDataURL('image/png');
+    ctx.fillText(content, width / 2, height / 2);
+
+    return canvas.toDataURL('image/png');
+  } finally {
+    document.body.removeChild(canvas);
+  }
 };
 
 /**

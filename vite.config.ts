@@ -18,6 +18,20 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      build: {
+        outDir: 'dist',
+        minify: 'esbuild',
+        sourcemap: false,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              vendor: ['react', 'react-dom'],
+              export: ['pptxgenjs', 'jspdf', 'html2canvas'],
+              ui: ['lucide-react']
+            }
+          }
+        }
       }
     };
 });
