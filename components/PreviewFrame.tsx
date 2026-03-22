@@ -194,11 +194,31 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
               };
               initIcons();
 
+              let savedRange = null;
+              document.addEventListener('selectionchange', () => {
+                const sel = window.getSelection();
+                if (sel.rangeCount > 0) {
+                  const range = sel.getRangeAt(0);
+                  if (root.contains(range.commonAncestorContainer)) {
+                    savedRange = range;
+                  }
+                }
+              });
+
               window.addEventListener('message', (event) => {
                 const { type, command, value, id, src, width } = event.data;
                 if (type === 'EXEC_COMMAND') {
                   root.focus();
-                  document.execCommand(command, false, value);
+                  if (savedRange) {
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(savedRange);
+                  }
+                  
+                  // For robust highlight formatting across browsers
+                  const cmd = command === 'hiliteColor' ? 'backColor' : command;
+                  
+                  document.execCommand(cmd, false, value);
                   sync();
                 } else if (type === 'UPDATE_IMAGE') {
                   const img = document.getElementById(id);

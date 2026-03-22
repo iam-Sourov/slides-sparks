@@ -71,7 +71,7 @@ const VisualToolbar: React.FC<VisualToolbarProps> = ({
           onChange={(e) => onCommand('formatBlock', e.target.value)}
           className="px-2 py-1.5 hover:bg-slate-100 rounded-lg text-xs font-medium text-slate-600 transition-colors bg-transparent border border-slate-200 focus:outline-none cursor-pointer"
         >
-          <option value="p">Normal Text</option>
+          <option value="<p>">Normal Text</option>
           <option value="<h1>">Heading 1</option>
           <option value="<h2>">Heading 2</option>
           <option value="<h3>">Heading 3</option>
@@ -111,13 +111,13 @@ const VisualToolbar: React.FC<VisualToolbarProps> = ({
         <div className="flex items-center gap-1 ml-1">
           <input 
             type="color"
-            onChange={(e) => onCommand('foreColor', e.target.value)}
+            onInput={(e) => onCommand('foreColor', e.target.value)}
             className="w-6 h-6 p-0 border border-slate-200 bg-transparent cursor-pointer rounded overflow-hidden"
             title="Text Color"
           />
           <input 
             type="color"
-            onChange={(e) => onCommand('hiliteColor', e.target.value)}
+            onInput={(e) => onCommand('hiliteColor', e.target.value)}
             className="w-6 h-6 p-0 border border-slate-200 bg-transparent cursor-pointer rounded overflow-hidden"
             title="Highlight Color"
           />

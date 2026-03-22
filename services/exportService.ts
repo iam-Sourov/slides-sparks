@@ -53,6 +53,24 @@ const rgbToHex = (rgb: string) => {
 };
 
 /**
+ * Converts CSS RGBA into PPTX fill object with transparency computation
+ */
+const getFillStyle = (rgb: string): { color: string, transparency?: number } | undefined => {
+  if (!rgb || rgb === 'transparent' || rgb.includes('rgba(0, 0, 0, 0)')) return undefined;
+  const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/) || rgb.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/);
+  if (!match) return undefined;
+  const r = parseInt(match[1]);
+  const g = parseInt(match[2]);
+  const b = parseInt(match[3]);
+  const color = ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+  const alpha = match[4] ? parseFloat(match[4]) : 1;
+  if (alpha < 1) {
+    return { color, transparency: Math.round((1 - alpha) * 100) };
+  }
+  return { color };
+};
+
+/**
  * Robustly converts an image URL to a Base64 string for PPTX.
  * Uses a proxy to bypass CORS and force PNG conversion for PPTX compatibility.
  */
@@ -155,7 +173,17 @@ const extractTextSegments = (el: HTMLElement, segments: any[] = []) => {
       if (isIconFont(childEl) || childEl.tagName === 'SVG' || childEl.tagName === 'IMG') {
         continue;
       }
-      const disp = window.getComputedStyle(childEl).display;
+      const childStyle = window.getComputedStyle(childEl);
+      const disp = childStyle.display;
+      const isStructuralInline = !isIconFont(childEl) && disp.includes('inline') && (
+        (childStyle.backgroundColor && childStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' && childStyle.backgroundColor !== 'transparent') || 
+        (parseFloat(childStyle.borderWidth) > 0 && childStyle.borderStyle !== 'none') || 
+        parseFloat(childStyle.borderRadius) > 0 ||
+        (childStyle.boxShadow && childStyle.boxShadow !== 'none')
+      );
+
+      if (isStructuralInline) continue; // Allow the structural parser to generate an absolute shape
+
       if (disp.includes('inline')) {
         extractTextSegments(childEl, segments);
       } else if (childEl.tagName === 'BR') {
@@ -280,7 +308,7 @@ const mapHtmlToNativePpt = async (
   if (rect.width < 1 || rect.height < 1) return;
 
   // 1. Fully Editable Backgrounds, Borders & Shadows (Layout Rectangles)
-  const bgColor = rgbToHex(style.backgroundColor);
+  const bgColor = getFillStyle(style.backgroundColor);
   const btWidth = parseFloat(style.borderTopWidth) || 0;
   const bbWidth = parseFloat(style.borderBottomWidth) || 0;
   const blWidth = parseFloat(style.borderLeftWidth) || 0;
@@ -336,7 +364,7 @@ const mapHtmlToNativePpt = async (
     const rx = parseFloat(style.borderRadius) || 0;
     pptSlide.addShape(rx > 0 ? pres.ShapeType.roundRect : pres.ShapeType.rect, {
       x: relX, y: relY, w: relW, h: relH,
-      fill: bgColor ? { color: bgColor } : undefined,
+      fill: bgColor ? bgColor : undefined,
       line: hasUniformBorder ? {
         color: rgbToHex(style.borderTopColor) || rgbToHex(style.borderColor) || '000000',
         width: Math.max(0.5, btWidth * ((PPT_WIDTH_IN * 72) / HTML_WIDTH_PX))
@@ -348,7 +376,7 @@ const mapHtmlToNativePpt = async (
     const rx = parseFloat(style.borderRadius) || 0;
     pptSlide.addShape(rx > 0 ? pres.ShapeType.roundRect : pres.ShapeType.rect, {
       x: relX, y: relY, w: relW, h: relH,
-      fill: bgColor ? { color: bgColor } : undefined,
+      fill: bgColor ? bgColor : undefined,
       shadow: shadowOptions,
       rectRadius: rx > 0 ? Math.min(rx / rect.width, 0.5) : undefined
     });
@@ -383,7 +411,7 @@ const mapHtmlToNativePpt = async (
         const pptRow: any[] = [];
         Array.from(row.cells).forEach((cell) => {
           const cellStyle = win.getComputedStyle(cell);
-          const cellBgColor = rgbToHex(cellStyle.backgroundColor);
+          const cellBgColor = getFillStyle(cellStyle.backgroundColor);
           
           const ptTop = (parseFloat(cellStyle.paddingTop) || 0) * 0.75;
           const ptRight = (parseFloat(cellStyle.paddingRight) || 0) * 0.75;
@@ -400,7 +428,7 @@ const mapHtmlToNativePpt = async (
           pptRow.push({
              text: segments,
              options: {
-                 fill: cellBgColor ? { color: cellBgColor } : undefined,
+                 fill: cellBgColor ? cellBgColor : undefined,
                  margin: [ptTop, ptRight, ptBottom, ptLeft],
                  border: cellBorder,
                  colspan: cell.colSpan || 1,
@@ -466,7 +494,14 @@ const mapHtmlToNativePpt = async (
     else if (child.nodeType === Node.ELEMENT_NODE) {
       const childEl = child as HTMLElement;
       if (!isIconFont(childEl) && childEl.tagName !== 'SVG' && childEl.tagName !== 'IMG') {
-        if (win.getComputedStyle(childEl).display.includes('inline')) {
+        const childStyle = win.getComputedStyle(childEl);
+        const isStructuralInline = childStyle.display.includes('inline') && (
+          (childStyle.backgroundColor && childStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' && childStyle.backgroundColor !== 'transparent') || 
+          (parseFloat(childStyle.borderWidth) > 0 && childStyle.borderStyle !== 'none') || 
+          parseFloat(childStyle.borderRadius) > 0 ||
+          (childStyle.boxShadow && childStyle.boxShadow !== 'none')
+        );
+        if (childStyle.display.includes('inline') && !isStructuralInline) {
           if (childEl.innerText && childEl.innerText.trim().length) hasInlineText = true;
         }
       }
@@ -502,11 +537,19 @@ const mapHtmlToNativePpt = async (
   // 5. Recursive traversal (ONLY for structural non-inline block elements)
   for (const child of Array.from(element.children)) {
     const childEl = child as HTMLElement;
-    const disp = win.getComputedStyle(childEl).display;
+    const childStyle = win.getComputedStyle(childEl);
+    const disp = childStyle.display;
     const isGraphic = isIconFont(childEl) || childEl.tagName === 'SVG' || childEl.tagName === 'IMG';
 
+    const isStructuralInline = !isGraphic && disp.includes('inline') && (
+      (childStyle.backgroundColor && childStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' && childStyle.backgroundColor !== 'transparent') || 
+      (parseFloat(childStyle.borderWidth) > 0 && childStyle.borderStyle !== 'none') ||
+      parseFloat(childStyle.borderRadius) > 0 ||
+      (childStyle.boxShadow && childStyle.boxShadow !== 'none')
+    );
+
     // Explicitly bypass inlined text structures here as they were formatted directly above
-    if (!disp.includes('inline') || isGraphic) {
+    if (!disp.includes('inline') || isGraphic || isStructuralInline) {
       await mapHtmlToNativePpt(childEl, pptSlide, rootRect, pres, imageCache);
     }
   }
