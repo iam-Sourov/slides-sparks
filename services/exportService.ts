@@ -398,7 +398,50 @@ const mapHtmlToNativePpt = async (
     drawLine(brWidth, style.borderRightColor, relX + relW, relY, 0, relH);
   }
 
-  // 2. Native Table Translation
+  // 2. Parse Virtual Pseudo-Elements (::before / ::after) for pure CSS geometric decorations
+  const parsePseudoElement = (pseudo: '::before' | '::after') => {
+    const pStyle = win.getComputedStyle(element, pseudo);
+    const content = pStyle.content;
+    // Skip if there's no actual generated content
+    if (!content || content === 'none' || content === 'normal') return;
+    if (pStyle.position !== 'absolute') return; // For visual structural accuracy, only absolute is rigidly mapped
+    
+    let w = parseFloat(pStyle.width);
+    let h = parseFloat(pStyle.height);
+    const left = parseFloat(pStyle.left);
+    const top = parseFloat(pStyle.top);
+    const right = parseFloat(pStyle.right);
+    const bottom = parseFloat(pStyle.bottom);
+    
+    if (isNaN(w) && !isNaN(left) && !isNaN(right)) w = rect.width - left - right;
+    if (isNaN(h) && !isNaN(top) && !isNaN(bottom)) h = rect.height - top - bottom;
+    
+    const pLeft = isNaN(left) ? (isNaN(right) ? 0 : rect.width - right - (isNaN(w)?0:w)) : left;
+    const pTop = isNaN(top) ? (isNaN(bottom) ? 0 : rect.height - bottom - (isNaN(h)?0:h)) : top;
+    
+    const pBgColor = getFillStyle(pStyle.backgroundColor);
+    if (!pBgColor) return;
+    
+    const pRelX = pxToIn(rect.left - rootRect.left + pLeft);
+    const pRelY = pxToInH(rect.top - rootRect.top + pTop);
+    const pRelW = pxToIn(isNaN(w) ? 0 : w);
+    const pRelH = pxToInH(isNaN(h) ? 0 : h);
+    
+    if (pRelW <= 0 || pRelH <= 0) return;
+    
+    const rx = parseFloat(pStyle.borderRadius) || 0;
+    
+    pptSlide.addShape(rx > 0 ? pres.ShapeType.roundRect : pres.ShapeType.rect, {
+      x: pRelX, y: pRelY, w: pRelW, h: pRelH,
+      fill: pBgColor,
+      rectRadius: rx > 0 ? Math.min(rx / (isNaN(w)?1:w), 0.5) : undefined
+    });
+  };
+
+  parsePseudoElement('::before');
+  parsePseudoElement('::after');
+
+  // 3. Native Table Translation
   if (element.tagName === 'TABLE') {
     const tableEl = element as HTMLTableElement;
     // PPTX addTable doesn't support complex inline vectors cleanly, 
