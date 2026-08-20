@@ -190,11 +190,14 @@ const Ribbon: React.FC<RibbonProps> = ({
                   className="px-2 py-1 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded text-xs font-medium text-slate-300 focus:outline-none cursor-pointer"
                 >
                   <option value="">Font Family</option>
-                  <option value="Arial">Arial</option>
                   <option value="'Inter', sans-serif">Inter</option>
-                  <option value="Georgia">Georgia</option>
+                  <option value="'Poppins', sans-serif">Poppins</option>
+                  <option value="'Montserrat', sans-serif">Montserrat</option>
+                  <option value="'Outfit', sans-serif">Outfit</option>
                   <option value="'Playfair Display', serif">Playfair Display</option>
-                  <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+                  <option value="'Lora', serif">Lora</option>
+                  <option value="'Roboto', sans-serif">Roboto</option>
+                  <option value="'Fira Code', monospace">Fira Code</option>
                 </select>
 
                 <select
@@ -347,7 +350,7 @@ const Ribbon: React.FC<RibbonProps> = ({
 
             {/* Shape Customizing Styles (only enabled when an element is active) */}
             <div className="flex flex-col gap-0.5">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <div className={`flex items-center gap-1 bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 ${!hasElementSelected && 'opacity-30'}`}>
                   <span className="text-[10px] text-slate-400 font-semibold">Fill:</span>
                   <input
@@ -382,7 +385,7 @@ const Ribbon: React.FC<RibbonProps> = ({
                   }}
                   className="px-2 py-1 bg-slate-900 border border-slate-800 rounded text-xs text-slate-300 disabled:opacity-30 focus:outline-none cursor-pointer"
                 >
-                  <option value="none">Border Width</option>
+                  <option value="none">Width</option>
                   <option value="none">None</option>
                   <option value="1px">1px</option>
                   <option value="2px">2px</option>
@@ -392,16 +395,55 @@ const Ribbon: React.FC<RibbonProps> = ({
 
                 <select
                   disabled={!hasElementSelected}
+                  onChange={(e) => onCommand('setElementStyle', JSON.stringify({ property: 'borderStyle', value: e.target.value }))}
+                  className="px-2 py-1 bg-slate-900 border border-slate-800 rounded text-xs text-slate-300 disabled:opacity-30 focus:outline-none cursor-pointer"
+                  title="Border Style"
+                >
+                  <option value="solid">Style</option>
+                  <option value="solid">Solid</option>
+                  <option value="dashed">Dashed</option>
+                  <option value="dotted">Dotted</option>
+                  <option value="double">Double</option>
+                </select>
+
+                <select
+                  disabled={!hasElementSelected}
                   onChange={(e) => onCommand('setElementStyle', JSON.stringify({ property: 'borderRadius', value: e.target.value }))}
                   className="px-2 py-1 bg-slate-900 border border-slate-800 rounded text-xs text-slate-300 disabled:opacity-30 focus:outline-none cursor-pointer"
                 >
-                  <option value="0px">Corner Radius</option>
+                  <option value="0px">Radius</option>
                   <option value="0px">Sharp</option>
                   <option value="4px">Small</option>
                   <option value="8px">Medium</option>
                   <option value="16px">Large</option>
                   <option value="9999px">Pill</option>
                 </select>
+
+                <select
+                  disabled={!hasElementSelected}
+                  onChange={(e) => onCommand('setElementStyle', JSON.stringify({ property: 'boxShadow', value: e.target.value }))}
+                  className="px-2 py-1 bg-slate-900 border border-slate-800 rounded text-xs text-slate-300 disabled:opacity-30 focus:outline-none cursor-pointer"
+                  title="Box Shadow"
+                >
+                  <option value="none">Shadow</option>
+                  <option value="none">None</option>
+                  <option value="0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)">Soft</option>
+                  <option value="0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -2px rgba(0,0,0,0.15)">Hard</option>
+                  <option value="0 0 15px 2px rgba(99,102,241,0.6)">Indigo Glow</option>
+                </select>
+
+                <div className={`flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded px-2 py-0.5 ${!hasElementSelected && 'opacity-30'}`}>
+                  <span className="text-[9px] text-slate-400 font-semibold">Opacity:</span>
+                  <input
+                    type="range"
+                    min="10"
+                    max="100"
+                    defaultValue="100"
+                    disabled={!hasElementSelected}
+                    onChange={(e) => onCommand('setElementStyle', JSON.stringify({ property: 'opacity', value: (parseFloat(e.target.value) / 100).toString() }))}
+                    className="w-14 h-1 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                  />
+                </div>
               </div>
               <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider text-center">Shape Formatting</span>
             </div>
@@ -411,41 +453,39 @@ const Ribbon: React.FC<RibbonProps> = ({
         {/* Tab 2: INSERT (New Slides, Shapes, Images, Tables, Icons) */}
         {activeTab === 'insert' && (
           <div className="flex items-center gap-5">
-            {/* Shapes */}
+            {/* Shapes & Blocks */}
             <div className="flex flex-col gap-0.5 border-r border-slate-850 pr-4">
               <div className="flex items-center gap-1.5">
                 <button
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => onCommand('insertTextBox')}
-                  className="px-3 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                  title="Add Text Box"
                 >
                   <Type className="w-3.5 h-3.5 text-indigo-400" />
                   <span>Text Box</span>
                 </button>
-                <button
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => onCommand('insertShape', 'rectangle')}
-                  className="px-3 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                
+                {/* Shapes select list */}
+                <select
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) {
+                      onCommand('insertShape', val);
+                      e.target.value = ''; // reset
+                    }
+                  }}
+                  className="px-2.5 py-1 bg-slate-900 border border-slate-800 text-slate-350 hover:text-white rounded-lg text-xs font-semibold focus:outline-none cursor-pointer"
                 >
-                  <Square className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Rectangle</span>
-                </button>
-                <button
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => onCommand('insertShape', 'circle')}
-                  className="px-3 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
-                >
-                  <Circle className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Circle</span>
-                </button>
-                <button
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => onCommand('insertShape', 'card')}
-                  className="px-3 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
-                >
-                  <LayoutGrid className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Card Block</span>
-                </button>
+                  <option value="">Shapes</option>
+                  <option value="rectangle">Rectangle</option>
+                  <option value="circle">Circle</option>
+                  <option value="triangle">Triangle</option>
+                  <option value="star">Star</option>
+                  <option value="arrow">Arrow Line</option>
+                  <option value="card">Card Block</option>
+                  <option value="callout">Callout Box</option>
+                </select>
               </div>
               <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider text-center">Shapes & Blocks</span>
             </div>
@@ -456,8 +496,8 @@ const Ribbon: React.FC<RibbonProps> = ({
                 <button
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-3 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
-                  title="Upload Image"
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                  title="Upload image file from computer"
                 >
                   <Image className="w-3.5 h-3.5 text-indigo-400" />
                   <span>Upload Image</span>
@@ -467,28 +507,54 @@ const Ribbon: React.FC<RibbonProps> = ({
                   type="file" 
                   accept="image/*" 
                   className="hidden" 
-                  onChange={handleFileUpload}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const base64 = event.target?.result as string;
+                        onCommand('insertImage', base64);
+                      };
+                      reader.readAsDataURL(file);
+                      e.target.value = '';
+                    }
+                  }}
                 />
                 
-                <button
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    const icon = prompt('Enter Lucide icon name (e.g. sparkles, star, heart, arrow-right, info):', 'sparkles');
-                    if (icon) onCommand('insertIcon', icon);
+                {/* Native Emoji Icons Dropdown (prevents sandbox script blockages) */}
+                <select
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) {
+                      onCommand('insertIcon', val);
+                      e.target.value = ''; // reset
+                    }
                   }}
-                  className="px-3 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                  className="px-2.5 py-1 bg-slate-900 border border-slate-800 text-slate-350 hover:text-white rounded-lg text-xs font-semibold focus:outline-none cursor-pointer"
+                  title="Insert Native Emoji Icons"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Lucide Icon</span>
-                </button>
+                  <option value="">Emojis</option>
+                  <option value="🚀">🚀 Launch</option>
+                  <option value="💡">💡 Idea</option>
+                  <option value="📈">📈 Growth</option>
+                  <option value="🏆">🏆 Trophy</option>
+                  <option value="🎨">🎨 Design</option>
+                  <option value="🔒">🔒 Security</option>
+                  <option value="🌍">🌍 Global</option>
+                  <option value="👥">👥 Team</option>
+                  <option value="✉️">✉️ Message</option>
+                  <option value="⚡">⚡ Speed</option>
+                  <option value="🎯">🎯 Goal</option>
+                  <option value="📢">📢 Announcement</option>
+                </select>
                 
                 <button
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
-                    const url = prompt('Enter URL:');
+                    const url = prompt('Enter website link URL:');
                     if (url) onCommand('createLink', url);
                   }}
-                  className="px-3 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
                 >
                   <Link className="w-3.5 h-3.5 text-indigo-400" />
                   <span>Link</span>
@@ -506,30 +572,45 @@ const Ribbon: React.FC<RibbonProps> = ({
                     const rows = prompt('Enter rows:', '3');
                     const cols = prompt('Enter columns:', '3');
                     if (rows && cols) {
-                      let table = '<table border="1" style="width:100%; border-collapse:collapse; border:1px solid #ccc;">';
+                      let table = '<table border="1" style="width:100%; border-collapse:collapse; border:1px solid rgba(255,255,255,0.12); font-family:Inter, sans-serif; font-size:14px; background:rgba(15,23,42,0.1);">';
                       for (let i = 0; i < parseInt(rows); i++) {
                         table += '<tr>';
                         for (let j = 0; j < parseInt(cols); j++) {
-                          table += '<td style="padding:8px; border:1px solid #ccc; color:#0f172a;">Cell</td>';
+                          table += '<td style="padding:10px; border:1px solid rgba(255,255,255,0.12); color:inherit; text-align:center;">Cell</td>';
                         }
                         table += '</tr>';
                       }
-                      table += '</table><p><br></p>';
-                      onCommand('insertHTML', table);
+                      table += '</table>';
+                      onCommand('insertTable', table);
                     }
                   }}
-                  className="px-3 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                  title="Insert Draggable Slide Table"
                 >
                   <Table className="w-3.5 h-3.5 text-indigo-400" />
                   <span>Table</span>
                 </button>
 
                 <button
-                  onClick={() => onAddSlide('title')}
-                  className="px-3 py-1 bg-indigo-650/10 hover:bg-indigo-650/20 border border-indigo-500/25 text-indigo-400 hover:text-indigo-300 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    const gridHTML = `<div class="grid grid-cols-2 gap-4 w-full p-4 bg-slate-900/40 border border-slate-850 rounded-2xl" style="position: absolute; left: 100px; top: 100px; width: 600px; z-index: 5; font-family: Inter, sans-serif; color: inherit;">
+                      <div style="border-right: 1px solid rgba(255,255,255,0.1); padding-right: 12px;">
+                        <h4 style="font-weight: bold; margin-bottom: 4px; font-size: 14px;">Left Column</h4>
+                        <p style="font-size: 11px; opacity: 0.7;">Add description point A...</p>
+                      </div>
+                      <div style="padding-left: 12px;">
+                        <h4 style="font-weight: bold; margin-bottom: 4px; font-size: 14px;">Right Column</h4>
+                        <p style="font-size: 11px; opacity: 0.7;">Add description point B...</p>
+                      </div>
+                    </div>`;
+                    onCommand('insertTable', gridHTML);
+                  }}
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-355 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                  title="Insert 2-Column Comparison Layout"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>New Slide</span>
+                  <LayoutGrid className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>2-Col Grid</span>
                 </button>
               </div>
               <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider text-center">Data & Layout</span>
@@ -540,51 +621,68 @@ const Ribbon: React.FC<RibbonProps> = ({
         {/* Tab 3: DESIGN (Slide Background Quick Style Themes) */}
         {activeTab === 'design' && (
           <div className="flex items-center gap-5">
+            {/* Custom Solid Color Background Picker */}
+            <div className="flex flex-col gap-0.5 border-r border-slate-850 pr-4">
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded px-2 py-0.5">
+                  <span className="text-[10px] text-slate-400 font-semibold">Custom Solid BG:</span>
+                  <input
+                    type="color"
+                    onInput={(e) => onCommand('setElementStyle', JSON.stringify({ property: 'background', value: (e.target as HTMLInputElement).value }))}
+                    className="w-4 h-4 p-0 border border-slate-700 bg-transparent cursor-pointer rounded overflow-hidden"
+                    title="Custom Solid Background Color"
+                  />
+                </div>
+              </div>
+              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider text-center">Custom Coloring</span>
+            </div>
+
+            {/* Premium Theme presets */}
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => onCommand('setElementStyle', JSON.stringify({ property: 'background', value: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' }))}
-                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
-                  title="Dark Indigo Gradient"
-                >
-                  <span className="w-3.5 h-3.5 rounded bg-gradient-to-br from-[#0f172a] to-[#1e1b4b] border border-slate-700"></span>
-                  <span>Midnight Glow</span>
-                </button>
-
-                <button
-                  onClick={() => onCommand('setElementStyle', JSON.stringify({ property: 'background', value: 'linear-gradient(135deg, #022c22 0%, #064e3b 100%)' }))}
-                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
-                  title="Deep Emerald Gradient"
-                >
-                  <span className="w-3.5 h-3.5 rounded bg-gradient-to-br from-[#022c22] to-[#064e3b] border border-slate-700"></span>
-                  <span>Emerald Sea</span>
-                </button>
-
-                <button
-                  onClick={() => onCommand('setElementStyle', JSON.stringify({ property: 'background', value: 'linear-gradient(135deg, #180828 0%, #2e0854 100%)' }))}
-                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
-                  title="Royal Purple Gradient"
-                >
-                  <span className="w-3.5 h-3.5 rounded bg-gradient-to-br from-[#180828] to-[#2e0854] border border-slate-700"></span>
-                  <span>Royal Velvet</span>
-                </button>
-
-                <button
                   onClick={() => onCommand('setElementStyle', JSON.stringify({ property: 'background', value: '#0f172a' }))}
-                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
-                  title="Solid Charcoal Slate"
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
+                  title="Dark Charcoal Slate Theme"
                 >
                   <span className="w-3.5 h-3.5 rounded bg-[#0f172a] border border-slate-700"></span>
-                  <span>Solid Slate</span>
+                  <span>Midnight Dark</span>
                 </button>
 
                 <button
-                  onClick={() => onCommand('setElementStyle', JSON.stringify({ property: 'background', value: '#f8fafc' }))}
-                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
-                  title="Clean Light Canvas"
+                  onClick={() => onCommand('setElementStyle', JSON.stringify({ property: 'background', value: '#f4f6f4' }))}
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-355 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
+                  title="Sage Minimalist Theme"
                 >
-                  <span className="w-3.5 h-3.5 rounded bg-[#f8fafc] border border-slate-300"></span>
-                  <span>Clean Light</span>
+                  <span className="w-3.5 h-3.5 rounded bg-[#f4f6f4] border border-slate-750"></span>
+                  <span>Sage Minimal</span>
+                </button>
+
+                <button
+                  onClick={() => onCommand('setElementStyle', JSON.stringify({ property: 'background', value: '#fcf8f2' }))}
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-355 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
+                  title="Pastel Peach Theme"
+                >
+                  <span className="w-3.5 h-3.5 rounded bg-[#fcf8f2] border border-slate-750"></span>
+                  <span>Pastel Peach</span>
+                </button>
+
+                <button
+                  onClick={() => onCommand('setElementStyle', JSON.stringify({ property: 'background', value: '#0f766e' }))}
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-355 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
+                  title="Ocean Teal Theme"
+                >
+                  <span className="w-3.5 h-3.5 rounded bg-[#0f766e] border border-slate-700"></span>
+                  <span>Ocean Mint</span>
+                </button>
+
+                <button
+                  onClick={() => onCommand('setElementStyle', JSON.stringify({ property: 'background', value: '#ffffff' }))}
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-355 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
+                  title="Pure White Theme"
+                >
+                  <span className="w-3.5 h-3.5 rounded bg-[#ffffff] border border-slate-300"></span>
+                  <span>Pure White</span>
                 </button>
               </div>
               <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider text-center">Active Slide Theme Presets</span>
