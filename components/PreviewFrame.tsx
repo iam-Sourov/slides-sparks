@@ -126,7 +126,7 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
         <html lang="en">
           <head>
             <meta charset="utf-8">
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;705&family=Outfit:wght@400;707&family=Playfair+Display:wght@400;707&family=JetBrains+Mono:wght@400;707&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Montserrat:wght@400;700;900&family=Outfit:wght@400;700;900&family=Playfair+Display:ital,wght@0,700;1,700&family=Poppins:wght@400;700;900&family=Lora:ital,wght@0,500;1,700&family=Roboto:wght@400;700&family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
             <script src="https://cdn.tailwindcss.com"></script>
             <script src="https://unpkg.com/lucide@latest"></script>
             <style>
@@ -153,7 +153,7 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
                 .slide-container > *:not(style):not(script):not(#canvas-selection-overlay):hover {
                   outline: 2.5px dashed rgba(99, 102, 241, 0.6) !important;
                   outline-offset: 2px;
-                  cursor: pointer;
+                  cursor: move !important;
                 }
                 #capture-root *:focus { 
                   outline: none !important;
@@ -186,13 +186,19 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
                 .handle-bl { bottom: -6px; left: -6px; cursor: nesw-resize; }
                 .handle-br { bottom: -6px; right: -6px; cursor: nwse-resize; }
               ` : ''}
-              img { max-width: 100%; height: auto; transition: all 0.2s; }
+              img { 
+                max-width: 100%; 
+                height: auto; 
+                transition: all 0.2s; 
+                user-select: none !important; 
+                -webkit-user-drag: none !important; 
+              }
               ul { list-style-type: disc; padding-left: 2rem; }
               ol { list-style-type: decimal; padding-left: 2rem; }
             </style>
           </head>
           <body>
-            <div id="capture-root" ${isVisualEdit ? 'contenteditable="true"' : ''}>${sanitizedHTML}</div>
+            <div id="capture-root">${sanitizedHTML}</div>
             <script>
               const root = document.getElementById('capture-root');
               let timeout;
@@ -294,12 +300,32 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
                       div.style.height = '150px';
                     } else if (value === 'rectangle') {
                       div.style.borderRadius = '8px';
+                    } else if (value === 'triangle') {
+                      div.style.clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)';
+                      div.style.width = '150px';
+                      div.style.height = '150px';
+                    } else if (value === 'star') {
+                      div.style.clipPath = 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)';
+                      div.style.backgroundColor = '#eab308';
+                      div.style.width = '160px';
+                      div.style.height = '160px';
+                    } else if (value === 'arrow') {
+                      div.style.clipPath = 'polygon(0% 20%, 60% 20%, 60% 0%, 100% 50%, 60% 100%, 60% 80%, 0% 80%)';
+                      div.style.backgroundColor = '#ef4444';
+                      div.style.width = '180px';
+                      div.style.height = '100px';
                     } else if (value === 'card') {
-                      div.className = 'card p-6 bg-slate-800/80 border border-slate-700 backdrop-blur rounded-2xl shadow-xl';
+                      div.className = 'card p-6 bg-slate-900/80 border border-slate-800 backdrop-blur rounded-2xl shadow-xl';
                       div.style.color = '#ffffff';
                       div.style.width = '350px';
                       div.style.height = '200px';
                       div.innerHTML = '<h3 class="text-xl font-bold mb-2">Card Title</h3><p class="text-slate-400 text-sm">Add details...</p>';
+                    } else if (value === 'callout') {
+                      div.className = 'card p-4 bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl';
+                      div.style.color = '#ffffff';
+                      div.style.width = '240px';
+                      div.style.height = '120px';
+                      div.innerHTML = '<p class="text-xs text-slate-300">💡 Double click to type callout...</p>';
                     }
                     slideContainer.appendChild(div);
                     
@@ -307,18 +333,47 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
                     updateOverlay();
                     window.parent.postMessage({ type: 'ELEMENT_SELECTED', hasSelection: true }, '*');
                   } else if (command === 'insertIcon') {
-                    const i = document.createElement('i');
-                    i.dataset.lucide = value;
-                    i.className = 'w-16 h-16 text-indigo-500';
-                    i.style.position = 'absolute';
-                    i.style.left = '200px';
-                    i.style.top = '200px';
-                    i.style.width = '64px';
-                    i.style.height = '64px';
-                    i.style.zIndex = '10';
-                    slideContainer.appendChild(i);
+                    // Render emojis directly as native CDNs-free lightweight scalable symbols
+                    const div = document.createElement('div');
+                    div.style.position = 'absolute';
+                    div.style.left = '200px';
+                    div.style.top = '200px';
+                    div.style.fontSize = '64px';
+                    div.style.lineHeight = '1';
+                    div.style.zIndex = '10';
+                    div.style.cursor = 'move';
+                    div.innerHTML = value;
+                    slideContainer.appendChild(div);
                     
-                    selectedElement = i;
+                    selectedElement = div;
+                    updateOverlay();
+                    window.parent.postMessage({ type: 'ELEMENT_SELECTED', hasSelection: true }, '*');
+                  } else if (command === 'insertImage') {
+                    const img = document.createElement('img');
+                    img.src = value;
+                    img.style.position = 'absolute';
+                    img.style.left = '100px';
+                    img.style.top = '100px';
+                    img.style.maxWidth = '350px';
+                    img.style.height = 'auto';
+                    img.style.zIndex = '8';
+                    slideContainer.appendChild(img);
+                    
+                    selectedElement = img;
+                    updateOverlay();
+                    window.parent.postMessage({ type: 'ELEMENT_SELECTED', hasSelection: true }, '*');
+                  } else if (command === 'insertTable') {
+                    const div = document.createElement('div');
+                    div.style.position = 'absolute';
+                    div.style.left = '100px';
+                    div.style.top = '100px';
+                    div.style.width = '500px';
+                    div.style.zIndex = '10';
+                    div.style.boxSizing = 'border-box';
+                    div.innerHTML = value;
+                    slideContainer.appendChild(div);
+                    
+                    selectedElement = div;
                     updateOverlay();
                     window.parent.postMessage({ type: 'ELEMENT_SELECTED', hasSelection: true }, '*');
                   } else if (command === 'bringToFront') {
@@ -397,6 +452,8 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
                         selectedElement.style.textAlign = aligns[cmd];
                       } else if (cmd === 'insertUnorderedList') {
                         selectedElement.innerHTML = '<ul><li>' + selectedElement.innerHTML + '</li></ul>';
+                      } else if (cmd === 'createLink') {
+                        selectedElement.innerHTML = '<a href="' + value + '" target="_blank" style="color: inherit; text-decoration: underline;">' + selectedElement.innerHTML + '</a>';
                       } else {
                         document.execCommand(cmd, false, value);
                       }
@@ -527,9 +584,10 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
                   return;
                 }
 
-                // If user clicked inside contenteditable text and is already active, ignore so cursor works
-                const isTextEditing = document.activeElement === e.target && e.target.tagName !== 'IMG' && e.target.tagName !== 'SVG';
-                
+                // If user clicked inside active contenteditable text, ignore so cursor works
+                const isTextEditing = e.target.getAttribute('contenteditable') === 'true' || e.target.closest('[contenteditable="true"]');
+                if (isTextEditing) return; // Allow placing cursors inside active text frame!
+
                 // Identify logical component target
                 const target = getLogicalElement(e.target);
                 if (!target) {
@@ -546,8 +604,6 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
                 updateOverlay();
                 window.parent.postMessage({ type: 'ELEMENT_SELECTED', hasSelection: true }, '*');
 
-                if (isTextEditing) return; // Allow placing cursors inside the active element
-
                 dragTarget = target;
                 startX = e.clientX;
                 startY = e.clientY;
@@ -561,6 +617,81 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
                 startHeight = rect.height;
 
                 isDraggingInitiated = false;
+              });
+
+              document.addEventListener('dblclick', (e) => {
+                const target = getLogicalElement(e.target);
+                if (target) {
+                  // Only make text elements contenteditable
+                  const tag = target.tagName.toLowerCase();
+                  const isTextTag = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'li', 'button', 'a', 'blockquote'].includes(tag) || 
+                                    (tag === 'div' && !target.classList.contains('slide-container'));
+                  
+                  if (isTextTag) {
+                    target.setAttribute('contenteditable', 'true');
+                    target.focus();
+                    
+                    // Select all text inside on focus
+                    const range = document.createRange();
+                    range.selectNodeContents(target);
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                    
+                    target.style.cursor = 'text';
+                    
+                    target.addEventListener('blur', () => {
+                      target.removeAttribute('contenteditable');
+                      target.style.cursor = '';
+                      sync();
+                    }, { once: true });
+                  }
+                } else {
+                  // Clicked on empty slide container background -> create new text box at click coordinates
+                  const rect = slideContainer.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const y = e.clientY - rect.top;
+                  
+                  const div = document.createElement('div');
+                  div.style.position = 'absolute';
+                  
+                  // Clamp coordinate values to stay fully inside layout canvas
+                  const left = Math.max(20, Math.min(x, 1280 - 320));
+                  const top = Math.max(20, Math.min(y, 720 - 70));
+                  div.style.left = left + 'px';
+                  div.style.top = top + 'px';
+                  
+                  div.style.width = '300px';
+                  div.style.minHeight = '50px';
+                  div.style.padding = '8px';
+                  div.style.boxSizing = 'border-box';
+                  div.style.zIndex = '10';
+                  
+                  const bgStyle = window.getComputedStyle(slideContainer);
+                  const isDark = bgStyle.backgroundColor.includes('rgba(0, 0, 0, 0)') || 
+                                 bgStyle.backgroundImage.includes('linear-gradient') || 
+                                 (parseFloat(bgStyle.backgroundColor.match(/\\d+/g)?.[0] || '255') < 100);
+                  div.style.color = isDark ? '#ffffff' : '#0f172a';
+                  div.style.fontSize = '24px';
+                  div.style.fontFamily = 'Inter, sans-serif';
+                  div.innerHTML = 'Double click to type...';
+                  slideContainer.appendChild(div);
+                  
+                  selectedElement = div;
+                  updateOverlay();
+                  window.parent.postMessage({ type: 'ELEMENT_SELECTED', hasSelection: true }, '*');
+                  
+                  // Focus it immediately
+                  div.setAttribute('contenteditable', 'true');
+                  div.focus();
+                  
+                  div.addEventListener('blur', () => {
+                    div.removeAttribute('contenteditable');
+                    sync();
+                  }, { once: true });
+                  
+                  sync();
+                }
               });
 
               document.addEventListener('mousemove', (e) => {
@@ -666,6 +797,10 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
                     e.preventDefault();
                   }
                 }
+              });
+
+              document.addEventListener('dragstart', (e) => {
+                e.preventDefault();
               });
               ` : ''}
             </script>

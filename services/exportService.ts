@@ -318,6 +318,9 @@ const mapHtmlToNativePpt = async (
   imageCache: Map<string, string>
 ) => {
   if (!element || element.nodeType !== Node.ELEMENT_NODE) return;
+  if (element.id === 'canvas-selection-overlay' || element.classList.contains('canvas-edit-overlay') || element.classList.contains('canvas-resize-handle')) {
+    return;
+  }
 
   const win = element.ownerDocument.defaultView || window;
   const style = win.getComputedStyle(element);
@@ -633,6 +636,15 @@ const captureAsImage = async (iframe: HTMLIFrameElement, transparentText = false
 
   const root = doc.getElementById('capture-root') || doc.body;
 
+  // Hide visual canvas edit overlays and handles temporarily so they are not captured in PDF/image export
+  const overlays = Array.from(root.querySelectorAll('#canvas-selection-overlay, .canvas-edit-overlay, .canvas-resize-handle'));
+  const originalOverlayDisplays = overlays.map((el) => {
+    const htmlEl = el as HTMLElement;
+    const originalDisplay = htmlEl.style.display;
+    htmlEl.style.display = 'none';
+    return { el: htmlEl, display: originalDisplay };
+  });
+
   // OPTION A FIX: Guarantee all arbitrary FontAwesome WebFonts are dynamically pre-inlined 
   // into pure interactive <svg> DOM nodes containing physical path data prior to reading.
   await dom.i2svg({ node: root });
@@ -796,6 +808,11 @@ const captureAsImage = async (iframe: HTMLIFrameElement, transparentText = false
   } as any);
 
   // Restore DOM
+  // Restore overlays displays to active states
+  originalOverlayDisplays.forEach(({ el, display }) => {
+    el.style.display = display;
+  });
+
   doc.head.removeChild(styleBlock);
   originalSvgStates.forEach(({ parent, nextSibling, svg, img }) => {
     if (parent && img.parentNode === parent) {
