@@ -1,305 +1,120 @@
-
-import React, { useState, useRef } from 'react';
-import { Plus, AlertCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Plus, AlertCircle, ChevronUp, ChevronDown, Copy, Trash2, Heading, Columns, BarChart, LayoutGrid, Quote, X } from 'lucide-react';
 import { Slide } from './types';
 import Navbar from './components/Navbar';
 import SlideEditor from './components/SlideEditor';
 import { exportSlides } from './services/exportService';
+import { SLIDE_TEMPLATES } from './services/templates';
 
-const DEFAULT_SLIDE_CODE = `
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
-<style>
-        .slide-container {
-            width: 1280px;
-            height: 720px;
-            position: relative;
-            background-color: #f3f4f6;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            font-family: 'Inter', sans-serif;
-        }
-
-        /* Header Styling */
-        .header-section {
-            padding: 32px 64px 16px 64px;
-            background-color: white;
-            z-index: 10;
-        }
-
-        .section-tag {
-            background-color: #fee2e2;
-            color: #b91c1c;
-            padding: 4px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            display: inline-block;
-            margin-bottom: 8px;
-        }
-
-        /* Grid Layout */
-        .grid-container {
-            flex: 1;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 32px;
-            padding: 16px 64px 48px 64px;
-            background-color: white;
-        }
-
-        /* Column Styling */
-        .column-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #e5e7eb;
-        }
-
-        .profit-header { border-bottom-color: #ef4444; }
-        .wealth-header { border-bottom-color: #f59e0b; }
-
-        .cards-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-        }
-
-        /* Card Styling */
-        .alert-card {
-            background-color: #ffffff;
-            border-radius: 8px;
-            padding: 14px 18px;
-            display: flex;
-            align-items: flex-start;
-            gap: 16px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05); /* slightly increased for better translation */
-            border: 1px solid #f3f4f6;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card-stripe-profit {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background-color: #ef4444;
-        }
-
-        .card-stripe-wealth {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background-color: #f59e0b;
-        }
-
-        .icon-profit {
-            color: #ef4444;
-            background-color: #fee2e2;
-            width: 36px;
-            height: 36px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            font-size: 16px;
-        }
-
-        .icon-wealth {
-            color: #d97706;
-            background-color: #fef3c7;
-            width: 36px;
-            height: 36px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            font-size: 16px;
-        }
-
-        h3 { margin: 0; }
-        p { margin: 0; }
-
-    </style>
-
-<div class="slide-container">
-<!-- Header -->
-<div class="header-section">
-<div class="flex justify-between items-end">
-<div>
-<span class="section-tag"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Critical Analysis</span>
-<h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">Strategic Limitations &amp; Risks</h1>
-<p class="text-gray-500 mt-2 text-lg">Comparative evaluation of inherent disadvantages in both approaches.</p>
-</div>
-<div class="text-right">
-<p class="text-sm font-bold text-gray-400 uppercase tracking-widest">Comparison Grid</p>
-<div class="h-1 w-24 bg-gray-200 mt-2 ml-auto rounded-full"></div>
-</div>
-</div>
-</div>
-<!-- Main Grid Content -->
-<div class="grid-container">
-<!-- Left Column: Profit Maximization -->
-<div class="flex flex-col">
-<div class="column-header profit-header">
-<div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center text-red-600 shadow-sm">
-<i class="fa-solid fa-chart-bar text-xl"></i>
-</div>
-<div>
-<h2 class="text-xl font-bold text-gray-900 leading-tight">Profit Maximization</h2>
-<p class="text-xs text-red-600 font-bold uppercase tracking-wide">Structural Flaws</p>
-</div>
-</div>
-<div class="cards-wrapper">
-<!-- Item 1 -->
-<div class="alert-card card-profit">
-<div class="card-stripe-profit"></div>
-<div class="icon-profit"><i class="fa-solid fa-hourglass-end"></i></div>
-<div>
-<h3 class="text-base font-bold text-gray-800">Short-Term Focus</h3>
-<p class="text-sm text-gray-500 mt-1 leading-snug">Prioritizes immediate earnings over long-term sustainability and growth.</p>
-</div>
-</div>
-<!-- Item 2 -->
-<div class="alert-card card-profit">
-<div class="card-stripe-profit"></div>
-<div class="icon-profit"><i class="fa-solid fa-dice"></i></div>
-<div>
-<h3 class="text-base font-bold text-gray-800">Ignores Risk</h3>
-<p class="text-sm text-gray-500 mt-1 leading-snug">Fails to distinguish between safe and risky income streams.</p>
-</div>
-</div>
-<!-- Item 3 -->
-<div class="alert-card card-profit">
-<div class="card-stripe-profit"></div>
-<div class="icon-profit"><i class="fa-solid fa-clock-rotate-left"></i></div>
-<div>
-<h3 class="text-base font-bold text-gray-800">No Time Value of Money</h3>
-<p class="text-sm text-gray-500 mt-1 leading-snug">Treats current and future dollars as equal, ignoring inflation and opportunity cost.</p>
-</div>
-</div>
-<!-- Item 4 -->
-<div class="alert-card card-profit">
-<div class="card-stripe-profit"></div>
-<div class="icon-profit"><i class="fa-solid fa-pen-to-square"></i></div>
-<div>
-<h3 class="text-base font-bold text-gray-800">Earnings Management</h3>
-<p class="text-sm text-gray-500 mt-1 leading-snug">Encourages accounting manipulation to meet short-term targets.</p>
-</div>
-</div>
-<!-- Item 5 -->
-<div class="alert-card card-profit">
-<div class="card-stripe-profit"></div>
-<div class="icon-profit"><i class="fa-solid fa-skull-crossbones"></i></div>
-<div>
-<h3 class="text-base font-bold text-gray-800">Brand Damage</h3>
-<p class="text-sm text-gray-500 mt-1 leading-snug">Cost-cutting measures can compromise product quality and reputation.</p>
-</div>
-</div>
-</div>
-</div>
-<!-- Right Column: Wealth Maximization -->
-<div class="flex flex-col">
-<div class="column-header wealth-header">
-<div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 shadow-sm">
-<i class="fa-solid fa-gem text-xl"></i>
-</div>
-<div>
-<h2 class="text-xl font-bold text-gray-900 leading-tight">Wealth Maximization</h2>
-<p class="text-xs text-amber-600 font-bold uppercase tracking-wide">Operational Challenges</p>
-</div>
-</div>
-<div class="cards-wrapper">
-<!-- Item 1 -->
-<div class="alert-card card-wealth">
-<div class="card-stripe-wealth"></div>
-<div class="icon-wealth"><i class="fa-solid fa-arrow-trend-down"></i></div>
-<div>
-<h3 class="text-base font-bold text-gray-800">Market Dependency</h3>
-<p class="text-sm text-gray-500 mt-1 leading-snug">Stock prices can fluctuate due to external market factors unrelated to performance.</p>
-</div>
-</div>
-<!-- Item 2 -->
-<div class="alert-card card-wealth">
-<div class="card-stripe-wealth"></div>
-<div class="icon-wealth"><i class="fa-solid fa-calculator"></i></div>
-<div>
-<h3 class="text-base font-bold text-gray-800">Analytical Complexity</h3>
-<p class="text-sm text-gray-500 mt-1 leading-snug">Requires complex calculations involving beta, WACC, and cash flow projections.</p>
-</div>
-</div>
-<!-- Item 3 -->
-<div class="alert-card card-wealth">
-<div class="card-stripe-wealth"></div>
-<div class="icon-wealth"><i class="fa-solid fa-seedling"></i></div>
-<div>
-<h3 class="text-base font-bold text-gray-800">Patient Capital Needed</h3>
-<p class="text-sm text-gray-500 mt-1 leading-snug">Strategies often have long gestation periods before yielding visible returns.</p>
-</div>
-</div>
-<!-- Item 4 -->
-<div class="alert-card card-wealth">
-<div class="card-stripe-wealth"></div>
-<div class="icon-wealth"><i class="fa-solid fa-handshake-slash"></i></div>
-<div>
-<h3 class="text-base font-bold text-gray-800">Agency Issues</h3>
-<p class="text-sm text-gray-500 mt-1 leading-snug">Potential conflict of interest between management and shareholders (Agency Problem).</p>
-</div>
-</div>
-<!-- Item 5 -->
-<div class="alert-card card-wealth">
-<div class="card-stripe-wealth"></div>
-<div class="icon-wealth"><i class="fa-solid fa-database"></i></div>
-<div>
-<h3 class="text-base font-bold text-gray-800">Data Intensity</h3>
-<p class="text-sm text-gray-500 mt-1 leading-snug">Relies heavily on accurate long-term forecasting and market data.</p>
-</div>
-</div>
-</div>
-</div>
-</div>
-<!-- Page Number -->
-<div class="absolute bottom-6 right-8 text-gray-200 font-black text-6xl opacity-40 z-0 pointer-events-none">09</div>
-</div>
-
-`;
+const getSlideTitle = (code: string, index: number) => {
+  const match = code.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  if (match && match[1]) {
+    return match[1].replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').trim();
+  }
+  return `Slide ${index + 1}`;
+};
 
 const App: React.FC = () => {
   const [slides, setSlides] = useState<Slide[]>(() => {
     try {
       const saved = localStorage.getItem('slides_v3');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.length > 0) return parsed;
+      }
     } catch (e) {
       console.error("Failed to load slides from localStorage", e);
     }
-    return [{ id: crypto.randomUUID(), code: DEFAULT_SLIDE_CODE }];
+    return [
+      { id: crypto.randomUUID(), code: SLIDE_TEMPLATES[0].code },
+      { id: crypto.randomUUID(), code: SLIDE_TEMPLATES[1].code }
+    ];
   });
 
-  React.useEffect(() => {
+  const [activeSlideId, setActiveSlideId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('slides_v3');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.length > 0) return parsed[0].id;
+      }
+    } catch (e) {}
+    return '';
+  });
+
+  useEffect(() => {
     localStorage.setItem('slides_v3', JSON.stringify(slides));
   }, [slides]);
+
+  useEffect(() => {
+    if (slides.length > 0 && (!activeSlideId || !slides.some(s => s.id === activeSlideId))) {
+      setActiveSlideId(slides[0].id);
+    }
+  }, [slides, activeSlideId]);
+
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
   const slideRefs = useRef<Map<string, HTMLIFrameElement>>(new Map());
 
-  const addSlide = () => {
+  const addSlideWithTemplate = (templateCode: string) => {
     const id = crypto.randomUUID();
-    const newSlide: Slide = {
-      id,
-      code: DEFAULT_SLIDE_CODE
-    };
-    setSlides(prev => [...prev, newSlide]);
+    const newSlide: Slide = { id, code: templateCode };
+    const activeIndex = slides.findIndex(s => s.id === activeSlideId);
+    setSlides(prev => {
+      const next = [...prev];
+      if (activeIndex !== -1) {
+        next.splice(activeIndex + 1, 0, newSlide);
+      } else {
+        next.push(newSlide);
+      }
+      return next;
+    });
+    setActiveSlideId(id);
+    setShowTemplateModal(false);
+  };
+
+  const duplicateSlide = (id: string) => {
+    const slideToDuplicate = slides.find(s => s.id === id);
+    if (!slideToDuplicate) return;
+    const newId = crypto.randomUUID();
+    const newSlide: Slide = { id: newId, code: slideToDuplicate.code };
+    const index = slides.findIndex(s => s.id === id);
+    setSlides(prev => {
+      const next = [...prev];
+      next.splice(index + 1, 0, newSlide);
+      return next;
+    });
+    setActiveSlideId(newId);
+  };
+
+  const deleteSlide = (id: string) => {
+    if (slides.length <= 1) return;
+    setSlides(prev => {
+      const filtered = prev.filter(s => s.id !== id);
+      if (activeSlideId === id) {
+        const deletedIndex = prev.findIndex(s => s.id === id);
+        const nextActiveIndex = deletedIndex === 0 ? 0 : deletedIndex - 1;
+        setActiveSlideId(filtered[nextActiveIndex].id);
+      }
+      return filtered;
+    });
+  };
+
+  const moveSlide = (id: string, direction: 'up' | 'down') => {
+    const index = slides.findIndex(s => s.id === id);
+    if (index === -1) return;
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === slides.length - 1) return;
+
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    setSlides(prev => {
+      const next = [...prev];
+      const temp = next[index];
+      next[index] = next[targetIndex];
+      next[targetIndex] = temp;
+      return next;
+    });
   };
 
   const updateSlideCode = (id: string, code: string) => {
@@ -334,51 +149,168 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white">
+    <div className="min-h-screen bg-[#020617] text-white flex flex-col">
       <Navbar onExport={handleExport} onExportAll={handleExportAll} isExporting={isExporting} />
       
-      <main className="container mx-auto px-4 pt-32 pb-64 max-w-5xl">
-        <header className="mb-20 text-center">
-          <h1 className="text-6xl font-black tracking-tighter mb-4">HTML Builder</h1>
-          <p className="text-slate-400 text-lg">WYSIWYG Visual Editor & High-Resolution PDF/PPTX Export</p>
-        </header>
-
-        {error && (
-          <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 flex items-center gap-3">
-            <AlertCircle className="w-5 h-5" />
-            <span className="text-sm font-medium">{error}</span>
+      <div className="flex-1 flex pt-20 overflow-hidden h-[calc(100vh-80px)]">
+        {/* Left Sidebar - Slide Navigator */}
+        <aside className="w-64 bg-[#090d16] border-r border-slate-800/80 flex flex-col select-none">
+          <div className="p-4 border-b border-slate-850 flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-widest text-slate-400">Slides Navigator</span>
+            <span className="text-xs font-bold text-indigo-400 font-mono bg-indigo-500/10 px-2 py-0.5 rounded-full">
+              {slides.length} {slides.length === 1 ? 'Slide' : 'Slides'}
+            </span>
           </div>
-        )}
+          
+          {/* Slide Thumbnails Scroll Area */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
+            {slides.map((slide, index) => {
+              const title = getSlideTitle(slide.code, index);
+              const isActive = slide.id === activeSlideId;
+              return (
+                <div 
+                  key={slide.id}
+                  onClick={() => setActiveSlideId(slide.id)}
+                  className={`group relative p-3 bg-slate-900/40 rounded-xl border border-slate-800/60 cursor-pointer transition-all duration-200 ${
+                    isActive ? 'border-indigo-500 bg-indigo-500/5 ring-1 ring-indigo-500/50' : 'hover:bg-slate-900/70 hover:border-slate-700/60'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-black text-slate-500 font-mono bg-slate-800 px-1.5 py-0.5 rounded">
+                      {index + 1}
+                    </span>
+                    
+                    {/* Slide Action Controls */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); moveSlide(slide.id, 'up'); }}
+                        disabled={index === 0}
+                        className="p-1 text-slate-500 hover:text-white disabled:opacity-30 rounded hover:bg-slate-800"
+                        title="Move Up"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); moveSlide(slide.id, 'down'); }}
+                        disabled={index === slides.length - 1}
+                        className="p-1 text-slate-500 hover:text-white disabled:opacity-30 rounded hover:bg-slate-800"
+                        title="Move Down"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); duplicateSlide(slide.id); }}
+                        className="p-1 text-slate-500 hover:text-white rounded hover:bg-slate-800"
+                        title="Duplicate Slide"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteSlide(slide.id); }}
+                        disabled={slides.length <= 1}
+                        className="p-1 text-slate-500 hover:text-red-400 disabled:opacity-30 rounded hover:bg-red-950/30"
+                        title="Delete Slide"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Mini Mockup of Slide */}
+                  <div className="h-20 bg-slate-950 rounded-lg border border-slate-850 flex items-center justify-center p-2 text-center overflow-hidden">
+                    <span className="text-xs font-bold text-slate-350 line-clamp-2 leading-tight">
+                      {title}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Bottom Actions - Add Slide */}
+          <div className="p-4 border-t border-slate-850">
+            <button
+              onClick={() => setShowTemplateModal(true)}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-sm text-white transition-all shadow-lg shadow-indigo-500/10 active:scale-[0.98]"
+            >
+              <Plus className="w-4 h-4" /> Add Slide
+            </button>
+          </div>
+        </aside>
 
-        <div className="space-y-24">
-          {slides.map((slide, index) => (
-            <SlideEditor
-              key={slide.id}
-              slide={slide}
-              index={index}
-              onRemove={() => setSlides(prev => prev.filter(s => s.id !== slide.id))}
-              onChange={(code) => updateSlideCode(slide.id, code)}
-              onRegisterRef={(ref) => ref ? slideRefs.current.set(slide.id, ref) : slideRefs.current.delete(slide.id)}
-            />
-          ))}
-        </div>
-      </main>
-
-      <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-50">
-        <button
-          onClick={addSlide}
-          className="flex items-center gap-3 px-8 py-4 bg-white text-black hover:bg-slate-200 rounded-full font-black shadow-2xl transition-all"
-        >
-          <Plus className="w-5 h-5" /> Add Slide
-        </button>
+        {/* Right Work Area */}
+        <main className="flex-1 overflow-y-auto bg-[#040815] bg-grid-pattern p-6 flex flex-col gap-6 relative">
+          {error && (
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 flex items-center gap-3">
+              <AlertCircle className="w-5 h-5" />
+              <span className="text-sm font-medium">{error}</span>
+            </div>
+          )}
+          
+          <div className="flex-1 w-full max-w-5xl mx-auto flex flex-col justify-center">
+            {slides.map((slide, index) => (
+              <SlideEditor
+                key={slide.id}
+                slide={slide}
+                index={index}
+                isActive={slide.id === activeSlideId}
+                onRemove={() => deleteSlide(slide.id)}
+                onChange={(code) => updateSlideCode(slide.id, code)}
+                onRegisterRef={(ref) => ref ? slideRefs.current.set(slide.id, ref) : slideRefs.current.delete(slide.id)}
+              />
+            ))}
+          </div>
+        </main>
       </div>
 
+      {/* Template Selection Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] max-w-2xl w-full p-8 shadow-2xl flex flex-col gap-6 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="text-2xl font-black tracking-tight">Select Slide Layout</h3>
+                <p className="text-slate-400 text-sm mt-1">Choose a beautiful pre-styled template to start building.</p>
+              </div>
+              <button 
+                onClick={() => setShowTemplateModal(false)}
+                className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800/80 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
+              {SLIDE_TEMPLATES.map((tmpl) => (
+                <div 
+                  key={tmpl.id}
+                  onClick={() => addSlideWithTemplate(tmpl.code)}
+                  className="p-5 bg-slate-950/60 hover:bg-slate-850 border border-slate-800/50 hover:border-indigo-500/50 rounded-2xl cursor-pointer text-left transition-all hover:scale-[1.01] flex flex-col gap-3 group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-200 group-hover:text-white transition-colors">{tmpl.name}</span>
+                    <span className="w-8 h-8 rounded-lg bg-slate-900 group-hover:bg-indigo-500/10 text-slate-400 group-hover:text-indigo-400 flex items-center justify-center transition-all">
+                      {tmpl.id === 'title' && <Heading className="w-4 h-4" />}
+                      {tmpl.id === 'comparison' && <Columns className="w-4 h-4" />}
+                      {tmpl.id === 'metrics' && <BarChart className="w-4 h-4" />}
+                      {tmpl.id === 'features' && <LayoutGrid className="w-4 h-4" />}
+                      {tmpl.id === 'quote' && <Quote className="w-4 h-4" />}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-normal">{tmpl.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {isExporting && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-lg z-[100] flex items-center justify-center">
-          <div className="text-center p-12 bg-gray-900 rounded-[3rem] border border-gray-800">
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-lg z-[100] flex items-center justify-center">
+          <div className="text-center p-12 bg-slate-900 rounded-[3rem] border border-slate-800">
              <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
              <h3 className="text-2xl font-bold">Processing Presentation</h3>
-             <p className="text-slate-500 mt-2">Capturing high-fidelity visuals...</p>
+             <p className="text-slate-500 mt-2">Capturing high-fidelity layouts...</p>
           </div>
         </div>
       )}

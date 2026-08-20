@@ -93,6 +93,17 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
     }
   };
 
+  const handleDeleteImage = () => {
+    if (!selectedImageId) return;
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage({ 
+        type: 'DELETE_IMAGE', 
+        id: selectedImageId 
+      }, '*');
+    }
+    setSelectedImageId(null);
+  };
+
   useEffect(() => {
     // Only update srcDoc if the code has changed from something OTHER than our own sync
     if (code !== lastSyncedHTML.current || !isReady) {
@@ -227,6 +238,13 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
                     if (width) img.style.width = width.includes('%') || width.includes('px') ? width : width + 'px';
                     sync();
                   }
+                } else if (type === 'DELETE_IMAGE') {
+                  const img = document.getElementById(id);
+                  if (img) {
+                    img.remove();
+                    sync();
+                    window.parent.postMessage({ type: 'IMAGE_DESELECTED' }, '*');
+                  }
                 }
                 initIcons();
               });
@@ -263,6 +281,7 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
             onInsertImage={handleInsertImage}
             onChangeImage={handleChangeImage}
             onSetImageWidth={handleSetImageWidth}
+            onDeleteImage={handleDeleteImage}
             selectedImage={!!selectedImageId}
           />
         </div>

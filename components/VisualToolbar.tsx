@@ -5,7 +5,7 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   ImagePlus, ImageIcon, Maximize2, 
   Undo2, Redo2, Type, List, ListOrdered,
-  ChevronDown, Link, Table, Plus, Minus, Upload
+  ChevronDown, Link, Table, Plus, Minus, Upload, Trash2
 } from 'lucide-react';
 
 interface VisualToolbarProps {
@@ -13,6 +13,7 @@ interface VisualToolbarProps {
   onInsertImage: (url: string) => void;
   onChangeImage: (url: string) => void;
   onSetImageWidth: (width: string) => void;
+  onDeleteImage: () => void;
   selectedImage: boolean;
 }
 
@@ -21,6 +22,7 @@ const VisualToolbar: React.FC<VisualToolbarProps> = ({
   onInsertImage, 
   onChangeImage, 
   onSetImageWidth,
+  onDeleteImage,
   selectedImage 
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -253,7 +255,7 @@ const VisualToolbar: React.FC<VisualToolbarProps> = ({
               <button 
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => changeFileInputRef.current?.click()} 
-                className="p-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-indigo-600 transition-colors" 
+                className="p-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-indigo-650 transition-colors" 
                 title="Replace Image"
               >
                 <ImageIcon className="w-4 h-4" />
@@ -265,6 +267,14 @@ const VisualToolbar: React.FC<VisualToolbarProps> = ({
                 className="hidden" 
                 onChange={(e) => handleFileUpload(e, true)}
               />
+              <button 
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={onDeleteImage} 
+                className="p-1.5 bg-red-50 hover:bg-red-100 rounded-lg text-red-650 transition-colors" 
+                title="Delete Selected Image"
+              >
+                <Trash2 className="w-4 h-4 text-red-500" />
+              </button>
               <div className="flex items-center gap-1 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg">
                 <Maximize2 className="w-3 h-3 text-slate-400" />
                 <input 

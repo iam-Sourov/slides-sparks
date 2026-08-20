@@ -7,6 +7,7 @@ import PreviewFrame from './PreviewFrame';
 interface SlideEditorProps {
   slide: Slide;
   index: number;
+  isActive: boolean;
   onRemove: () => void;
   onChange: (code: string) => void;
   onRegisterRef: (ref: HTMLIFrameElement | null) => void;
@@ -15,6 +16,7 @@ interface SlideEditorProps {
 const SlideEditor: React.FC<SlideEditorProps> = ({ 
   slide, 
   index, 
+  isActive,
   onRemove, 
   onChange,
   onRegisterRef
@@ -22,7 +24,11 @@ const SlideEditor: React.FC<SlideEditorProps> = ({
   const [viewMode, setViewMode] = useState<'editor' | 'preview' | 'visual'>('preview');
 
   return (
-    <div className="group relative bg-gray-900 rounded-3xl border border-gray-800 shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className={`group relative bg-gray-900 rounded-3xl border border-slate-800 shadow-2xl overflow-hidden transition-all duration-300 ${
+      isActive 
+        ? 'block animate-in fade-in slide-in-from-bottom-4 duration-500' 
+        : 'absolute invisible pointer-events-none h-0 w-0 overflow-hidden'
+    }`}>
       <div className="flex items-center justify-between px-6 py-4 bg-gray-800/50 border-b border-gray-800">
         <div className="flex items-center gap-4">
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-700 text-xs font-bold text-gray-400">
@@ -83,7 +89,7 @@ const SlideEditor: React.FC<SlideEditorProps> = ({
             />
           </div>
         </div>
-        <div className={viewMode !== 'editor' ? 'flex justify-center bg-gray-950 p-6 md:p-12' : 'hidden'}>
+        <div className={viewMode !== 'editor' ? 'flex justify-center bg-gray-950 p-6 md:p-12' : 'absolute invisible pointer-events-none h-0 w-0 overflow-hidden'}>
           <div className="w-full max-w-[800px]">
              <PreviewFrame 
               code={slide.code} 
