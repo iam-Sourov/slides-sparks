@@ -268,36 +268,35 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="w-[380px] bg-slate-950 border-l border-slate-850 flex flex-col h-full animate-in slide-in-from-right duration-250 shrink-0">
-      {/* Thinner h-14 Header */}
-      <div className="h-14 px-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
+    <div className="w-80 bg-[#090d16] border-l border-slate-800/85 flex flex-col h-full animate-in slide-in-from-right duration-250 shrink-0 select-none">
+      {/* Header matching Slides Navigator */}
+      <div className="p-4 border-b border-slate-850 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" />
-          <span className="font-bold text-sm text-slate-100">AI Slide Assistant</span>
+          <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+          <span className="text-xs font-black uppercase tracking-widest text-slate-400">AI Assistant</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className={`p-2 rounded-lg border transition-all ${
-              showSettings 
-                ? 'bg-slate-900 border-slate-700 text-white' 
-                : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900 hover:text-white'
+            className={`p-1.5 rounded hover:bg-slate-800 text-slate-500 hover:text-white transition-all ${
+              showSettings ? 'bg-slate-800 text-white' : ''
             }`}
             title="Settings"
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:bg-slate-900 hover:text-white rounded-lg transition-all"
+            className="p-1.5 text-slate-500 hover:text-red-400 rounded hover:bg-red-950/30 transition-all"
+            title="Close Assistant"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Main Panel View */}
-      <div className="flex-1 overflow-y-auto p-5 flex flex-col relative min-h-0 bg-slate-950">
+      {/* Main Panel View matching Slides Navigator background */}
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col relative min-h-0 bg-[#090d16]">
         {showSettings ? (
           /* Credentials Form */
           <form onSubmit={handleSaveSettings} className="space-y-5 animate-in fade-in duration-200">
@@ -436,7 +435,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({
               {chatHistory.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex gap-3 items-start ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+                  className={`flex gap-2.5 items-start ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
                 >
                   {/* Avatar */}
                   {msg.sender === 'assistant' ? (
@@ -451,12 +450,12 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({
 
                   {/* Bubble content */}
                   <div
-                    className={`max-w-[78%] text-xs leading-relaxed ${
+                    className={`max-w-[82%] text-xs leading-relaxed ${
                       msg.sender === 'user'
-                        ? 'bg-slate-900/80 border border-slate-800/80 text-slate-100 rounded-2xl rounded-tr-none px-3.5 py-2.5'
+                        ? 'bg-indigo-600/10 border border-indigo-500/25 text-indigo-100 rounded-2xl rounded-tr-none px-3.5 py-2.5 shadow-sm'
                         : msg.isError
                         ? 'text-red-400 bg-red-950/15 border border-red-900/30 rounded-2xl px-3.5 py-2.5'
-                        : 'text-slate-300 px-1 py-1'
+                        : 'bg-slate-900/60 border border-slate-850/80 text-slate-200 rounded-2xl rounded-tl-none px-3.5 py-2.5 shadow-sm'
                     }`}
                   >
                     <p className="whitespace-pre-wrap">{msg.text}</p>
@@ -468,11 +467,11 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({
               ))}
               
               {isGenerating && (
-                <div className="flex gap-3 items-start">
+                <div className="flex gap-2.5 items-start">
                   <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-black text-white shrink-0 shadow-sm animate-pulse">
                     AI
                   </div>
-                  <div className="bg-slate-900/50 border border-slate-850 rounded-2xl px-4 py-3 text-xs text-slate-400 max-w-[78%] flex flex-col gap-2 shadow-sm animate-pulse">
+                  <div className="bg-slate-900/50 border border-slate-850 rounded-2xl px-4 py-3 text-xs text-slate-400 max-w-[82%] flex flex-col gap-2 shadow-sm animate-pulse">
                     <div className="flex items-center gap-1.5">
                       <RefreshCw className="w-3 h-3 text-indigo-400 animate-spin" />
                       <span className="font-bold text-[9px] text-indigo-400 font-mono tracking-wider uppercase">
@@ -486,21 +485,21 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({
               <div ref={chatEndRef} />
             </div>
 
-            {/* Suggestions list */}
+            {/* Suggestions list formatted as vertical cards list */}
             {!isGenerating && chatHistory.length <= 2 && (
-              <div className="space-y-1.5 pt-2.5 border-t border-slate-900">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 font-mono block">
+              <div className="space-y-2 pt-3 border-t border-slate-900">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 font-mono block pl-1">
                   Quick Actions
                 </span>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-col gap-1.5">
                   {SUGGESTIONS.map((suggestion, i) => (
                     <button
                       key={i}
                       onClick={() => handleSendPrompt(suggestion.text)}
-                      className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-900/40 hover:bg-slate-900 border border-slate-850 hover:border-slate-800 text-slate-400 hover:text-slate-200 rounded-lg text-[10px] transition-all hover:scale-[1.01] active:scale-[0.99] font-medium"
+                      className="w-full px-3 py-2 bg-slate-900/40 hover:bg-slate-900 border border-slate-850 hover:border-slate-800 text-slate-400 hover:text-slate-200 rounded-xl flex items-center gap-2.5 transition-all text-left group"
                     >
-                      <span>{suggestion.icon}</span>
-                      <span>{suggestion.text.substring(0, 42)}...</span>
+                      <span className="text-xs group-hover:scale-110 transition-transform">{suggestion.icon}</span>
+                      <span className="truncate flex-1 text-[11px] font-medium leading-tight">{suggestion.text}</span>
                     </button>
                   ))}
                 </div>
@@ -510,24 +509,52 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({
         )}
       </div>
 
-      {/* Floating ChatGPT/Claude Style Input Area */}
+      {/* Symmetrical Input Area Matching Navigator Style */}
       {!showSettings && (
-        <div className="p-4 border-t border-slate-800 bg-slate-950 flex flex-col gap-3">
+        <div className="p-4 border-t border-slate-800 bg-[#090d16] flex flex-col gap-2.5">
           {/* Key missing warning */}
           {!config.apiKey && (
-            <div className="flex items-center justify-between p-2.5 bg-amber-950/20 border border-amber-900/30 rounded-lg text-amber-300 text-[11px]">
-              <span>Configure your credentials to activate the agent.</span>
+            <div className="flex items-center justify-between p-2.5 bg-amber-950/20 border border-amber-900/30 rounded-lg text-amber-300 text-[10px] leading-tight">
+              <span>Setup credentials to begin generation.</span>
               <button
                 onClick={() => setShowSettings(true)}
-                className="underline hover:text-white font-bold font-mono"
+                className="underline hover:text-white font-black"
               >
-                Configure
+                Config
               </button>
             </div>
           )}
 
-          {/* Unified Prompt Input Box Container */}
-          <div className="bg-slate-900 border border-slate-800 focus-within:border-slate-700 rounded-xl p-2.5 flex flex-col transition-all">
+          {/* Symmetrical Mode Switcher Tab Bar */}
+          <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-850 w-full">
+            <button
+              onClick={() => setMode('create')}
+              type="button"
+              disabled={isGenerating}
+              className={`flex-1 text-center py-1 text-[9px] font-black uppercase tracking-wider rounded-md transition-all ${
+                mode === 'create'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-500 hover:text-slate-350'
+              }`}
+            >
+              Create New
+            </button>
+            <button
+              onClick={() => setMode('edit')}
+              type="button"
+              disabled={isGenerating || !currentSlideCode}
+              className={`flex-1 text-center py-1 text-[9px] font-black uppercase tracking-wider rounded-md transition-all ${
+                mode === 'edit'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-550 hover:text-slate-350 disabled:opacity-30'
+              }`}
+            >
+              Modify Active
+            </button>
+          </div>
+
+          {/* Prompt Input Box */}
+          <div className="bg-slate-900/50 border border-slate-800 focus-within:border-slate-700 rounded-xl p-2 flex flex-col transition-all">
             <textarea
               rows={2}
               value={prompt}
@@ -541,58 +568,30 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({
               }}
               placeholder={
                 !config.apiKey 
-                  ? 'Input credentials to begin...' 
+                  ? 'Input credentials...' 
                   : mode === 'edit'
                   ? 'Describe details to modify on the current slide...' 
-                  : 'Describe the slide content and style you want...'
+                  : 'Describe the slide content and style...'
               }
-              className="w-full bg-transparent text-xs text-slate-200 focus:outline-none resize-none leading-relaxed placeholder-slate-550 border-0 p-1 pr-8 no-scrollbar"
+              className="w-full bg-transparent text-[11px] text-slate-205 focus:outline-none resize-none leading-relaxed placeholder-slate-500 border-0 p-1 pr-6 no-scrollbar"
             />
             
-            {/* Input Options Row inside prompt box */}
-            <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-850/80">
-              <div className="flex items-center gap-1.5">
-                {/* Mode Selector */}
-                <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800/80">
-                  <button
-                    onClick={() => setMode('create')}
-                    type="button"
-                    disabled={isGenerating}
-                    className={`px-2.5 py-1 text-[9px] font-bold rounded-md transition-all ${
-                      mode === 'create'
-                        ? 'bg-slate-800 text-slate-100'
-                        : 'text-slate-450 hover:text-slate-300'
-                    }`}
-                  >
-                    Create
-                  </button>
-                  <button
-                    onClick={() => setMode('edit')}
-                    type="button"
-                    disabled={isGenerating || !currentSlideCode}
-                    className={`px-2.5 py-1 text-[9px] font-bold rounded-md transition-all ${
-                      mode === 'edit'
-                        ? 'bg-slate-800 text-slate-100'
-                        : 'text-slate-455 hover:text-slate-350 disabled:opacity-30'
-                    }`}
-                  >
-                    Modify Active
-                  </button>
-                </div>
-
-                {/* Model badge */}
-                {config.apiKey && (
-                  <span className="text-[9px] font-mono text-slate-500 bg-slate-950 border border-slate-850 px-2 py-1 rounded-lg">
-                    {config.model.split('-').slice(0, 3).join('-')}
-                  </span>
-                )}
-              </div>
+            {/* Input Options Row inside prompt box (Decluttered) */}
+            <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-850/60">
+              {/* Model badge */}
+              {config.apiKey ? (
+                <span className="text-[9px] font-mono text-slate-500 bg-slate-950 border border-slate-850 px-2 py-0.5 rounded">
+                  {config.model.split('-').slice(0, 3).join('-')}
+                </span>
+              ) : (
+                <span />
+              )}
 
               {/* Submit trigger button */}
               <button
                 onClick={() => handleSendPrompt()}
                 disabled={isGenerating || !prompt.trim() || !config.apiKey}
-                className="p-1.5 bg-slate-50 hover:bg-slate-200 disabled:bg-slate-900 disabled:text-slate-600 text-slate-950 rounded-lg shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="p-1.5 bg-slate-50 hover:bg-slate-200 disabled:bg-slate-955 disabled:text-slate-600 text-slate-950 rounded-lg shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>
