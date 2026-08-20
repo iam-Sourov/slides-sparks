@@ -198,14 +198,24 @@ const App: React.FC = () => {
     setActiveSlideId(newId);
   };
 
+  const addBlankSlide = () => {
+    const id = crypto.randomUUID();
+    const newSlide: Slide = { id, code: SLIDE_TEMPLATES[0].code };
+    setSlides(prev => [...prev, newSlide]);
+    setActiveSlideId(id);
+  };
+
   const deleteSlide = (id: string) => {
-    if (slides.length <= 1) return;
     setSlides(prev => {
       const filtered = prev.filter(s => s.id !== id);
       if (activeSlideId === id) {
-        const deletedIndex = prev.findIndex(s => s.id === id);
-        const nextActiveIndex = deletedIndex === 0 ? 0 : deletedIndex - 1;
-        setActiveSlideId(filtered[nextActiveIndex].id);
+        if (filtered.length > 0) {
+          const deletedIndex = prev.findIndex(s => s.id === id);
+          const nextActiveIndex = deletedIndex === 0 ? 0 : deletedIndex - 1;
+          setActiveSlideId(filtered[nextActiveIndex].id);
+        } else {
+          setActiveSlideId('');
+        }
       }
       return filtered;
     });
@@ -281,7 +291,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white flex flex-col">
+    <div className="h-screen bg-[#020617] text-white flex flex-col overflow-hidden">
       {/* Top Microsoft PowerPoint-Style Ribbon Bar */}
       <Ribbon
         onCommand={executeCommand}
@@ -304,7 +314,7 @@ const App: React.FC = () => {
       />
       
       {/* 3-Section Workspace layout: Navigator - Canvas Workspace - AI Copilot Sidebar */}
-      <div className="flex-1 flex pt-28 overflow-hidden h-[calc(100vh-112px)]">
+      <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Slide Navigator */}
         <aside className={`bg-[#090d16] border-r border-slate-800/85 flex flex-col select-none transition-all duration-300 ease-in-out shrink-0 ${
           isSidebarCollapsed ? 'w-0 border-r-0 overflow-hidden' : 'w-64'
@@ -361,8 +371,7 @@ const App: React.FC = () => {
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteSlide(slide.id); }}
-                        disabled={slides.length <= 1}
-                        className="p-1 text-slate-500 hover:text-red-400 disabled:opacity-30 rounded hover:bg-red-950/30"
+                        className="p-1 text-slate-500 hover:text-red-400 rounded hover:bg-red-950/30"
                         title="Delete Slide"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -381,13 +390,19 @@ const App: React.FC = () => {
             })}
           </div>
           
-          {/* Bottom Actions - Choose layout templates */}
-          <div className="p-4 border-t border-slate-850">
+          {/* Bottom Actions - Add Slide options */}
+          <div className="p-4 border-t border-slate-850 flex flex-col gap-2">
+            <button
+              onClick={addBlankSlide}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-xs text-white transition-all active:scale-[0.98]"
+            >
+              <Plus className="w-3.5 h-3.5 text-indigo-200" /> Add Blank Slide
+            </button>
             <button
               onClick={() => setShowTemplateModal(true)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 hover:bg-slate-800 rounded-xl font-bold text-xs text-slate-355 border border-slate-800 transition-all active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-2 py-2 bg-slate-900 hover:bg-slate-800 rounded-xl font-bold text-[10px] text-slate-355 border border-slate-800 transition-all active:scale-[0.98]"
             >
-              <Plus className="w-3.5 h-3.5" /> Choose Layout
+              Choose Layout Template
             </button>
           </div>
         </aside>
@@ -402,18 +417,46 @@ const App: React.FC = () => {
           )}
           
           <div className="flex-1 w-full max-w-5xl mx-auto flex flex-col justify-center">
-            {slides.map((slide, index) => (
-              <SlideEditor
-                key={slide.id}
-                slide={slide}
-                index={index}
-                isActive={slide.id === activeSlideId}
-                showGridlines={showGridlines}
-                onRemove={() => deleteSlide(slide.id)}
-                onChange={(code) => updateSlideCode(slide.id, code)}
-                onRegisterRef={(ref) => ref ? slideRefs.current.set(slide.id, ref) : slideRefs.current.delete(slide.id)}
-              />
-            ))}
+            {slides.length === 0 ? (
+              <div className="text-center p-12 bg-slate-900/40 border border-slate-800/80 rounded-[3rem] max-w-lg mx-auto flex flex-col items-center gap-6 shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30">
+                  <Sparkles className="w-8 h-8 text-indigo-200" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black tracking-tight text-white">Your Presentation is Empty</h3>
+                  <p className="text-slate-400 text-sm mt-2 leading-relaxed">
+                    Create slides from scratch, select preset layouts, or let the AI Assistant write copy and styling.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 w-full">
+                  <button
+                    onClick={addBlankSlide}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/20 transition-all active:scale-[0.98]"
+                  >
+                    <Plus className="w-4 h-4" /> Add Blank Slide
+                  </button>
+                  <button
+                    onClick={() => setIsAIDrawerOpen(true)}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-sm font-bold transition-all active:scale-[0.98]"
+                  >
+                    🪄 Generate with AI
+                  </button>
+                </div>
+              </div>
+            ) : (
+              slides.map((slide, index) => (
+                <SlideEditor
+                  key={slide.id}
+                  slide={slide}
+                  index={index}
+                  isActive={slide.id === activeSlideId}
+                  showGridlines={showGridlines}
+                  onRemove={() => deleteSlide(slide.id)}
+                  onChange={(code) => updateSlideCode(slide.id, code)}
+                  onRegisterRef={(ref) => ref ? slideRefs.current.set(slide.id, ref) : slideRefs.current.delete(slide.id)}
+                />
+              ))
+            )}
           </div>
         </main>
 
