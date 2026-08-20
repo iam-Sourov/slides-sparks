@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Plus, AlertCircle, ChevronUp, ChevronDown, Copy, Trash2, Heading, Columns, BarChart, LayoutGrid, Quote, X } from 'lucide-react';
 import { Slide } from './types';
-import Navbar from './components/Navbar';
+import Ribbon from './components/Ribbon';
 import SlideEditor from './components/SlideEditor';
 import { exportSlides } from './services/exportService';
 import { SLIDE_TEMPLATES } from './services/templates';
+import { AIConfig } from './services/aiService';
+import { AIAssistantDrawer } from './components/AIAssistantDrawer';
 
 const getSlideTitle = (code: string, index: number) => {
   const match = code.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
@@ -55,7 +57,115 @@ const App: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [isAIDrawerOpen, setIsAIDrawerOpen] = useState(true); // Open AI Copilot by default (like PowerPoint Copilot)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [hasElementSelected, setHasElementSelected] = useState(false);
+  const [showGridlines, setShowGridlines] = useState(true); // Default ON for alignment visibility
+
+  // Undo/Redo History Stack state
+  const [history, setHistory] = useState<Slide[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const isInternalChange = useRef(false);
+
+  // Sync slides to undo/redo history stack
+  useEffect(() => {
+    if (isInternalChange.current) {
+      isInternalChange.current = false;
+      return;
+    }
+    if (slides.length > 0) {
+      const currentSlidesStr = JSON.stringify(slides);
+      const historyStr = historyIndex >= 0 ? JSON.stringify(history[historyIndex]) : '';
+      if (currentSlidesStr !== historyStr) {
+        const newHistory = history.slice(0, historyIndex + 1);
+        newHistory.push(JSON.parse(currentSlidesStr));
+        setHistory(newHistory);
+        setHistoryIndex(newHistory.length - 1);
+      }
+    }
+  }, [slides, historyIndex, history]);
+
+  const undo = () => {
+    if (historyIndex > 0) {
+      isInternalChange.current = true;
+      const prevIndex = historyIndex - 1;
+      setHistoryIndex(prevIndex);
+      setSlides(JSON.parse(JSON.stringify(history[prevIndex])));
+    }
+  };
+
+  const redo = () => {
+    if (historyIndex < history.length - 1) {
+      isInternalChange.current = true;
+      const nextIndex = historyIndex + 1;
+      setHistoryIndex(nextIndex);
+      setSlides(JSON.parse(JSON.stringify(history[nextIndex])));
+    }
+  };
+
+  const [aiConfig, setAiConfig] = useState<AIConfig>(() => {
+    try {
+      const saved = localStorage.getItem('ai_config_v1');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      provider: 'gemini',
+      apiKey: (process.env as any).GEMINI_API_KEY || '',
+      model: 'gemini-2.6-flash'
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('ai_config_v1', JSON.stringify(aiConfig));
+  }, [aiConfig]);
+
+  // Reset selection state when changing slides
+  useEffect(() => {
+    setHasElementSelected(false);
+  }, [activeSlideId]);
+
+  // Sync element selection state from visual editor iframe
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'ELEMENT_SELECTED') {
+        setHasElementSelected(event.data.hasSelection);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  const activeSlide = slides.find(s => s.id === activeSlideId);
   const slideRefs = useRef<Map<string, HTMLIFrameElement>>(new Map());
+
+  const applyActiveBackgroundToAll = () => {
+    if (!activeSlide) return;
+    // Extract style attribute from the slide-container div of the active slide
+    const match = activeSlide.code.match(/<div[^>]*class="[^"]*slide-container[^"]*"[^>]*style="([^"]*)"/i);
+    if (match && match[1]) {
+      const styleToApply = match[1];
+      setSlides(prev => prev.map(s => {
+        if (s.id === activeSlideId) return s;
+        const updated = s.code.replace(/(<div[^>]*class="[^"]*slide-container[^"]*"[^>]*style=")([^"]*)(")/i, `$1${styleToApply}$3`);
+        return { ...s, code: updated };
+      }));
+    }
+  };
+
+  const executeCommand = (command: string, value?: string) => {
+    if (command === 'undo') {
+      undo();
+      return;
+    }
+    if (command === 'redo') {
+      redo();
+      return;
+    }
+    const ref = slideRefs.current.get(activeSlideId);
+    if (ref?.contentWindow) {
+      ref.contentWindow.postMessage({ type: 'EXEC_COMMAND', command, value }, '*');
+    }
+  };
 
   const addSlideWithTemplate = (templateCode: string) => {
     const id = crypto.randomUUID();
@@ -121,6 +231,28 @@ const App: React.FC = () => {
     setSlides(prev => prev.map(s => s.id === id ? { ...s, code } : s));
   };
 
+  const handleApplySlide = (code: string, mode: 'create' | 'edit') => {
+    if (code) {
+      if (mode === 'create') {
+        const id = crypto.randomUUID();
+        const newSlide: Slide = { id, code };
+        const activeIndex = slides.findIndex(s => s.id === activeSlideId);
+        setSlides(prev => {
+          const next = [...prev];
+          if (activeIndex !== -1) {
+            next.splice(activeIndex + 1, 0, newSlide);
+          } else {
+            next.push(newSlide);
+          }
+          return next;
+        });
+        setActiveSlideId(id);
+      } else if (mode === 'edit' && activeSlideId) {
+        updateSlideCode(activeSlideId, code);
+      }
+    }
+  };
+
   const handleExport = async (type: 'PDF' | 'PPTX') => {
     if (isExporting || slides.length === 0) return;
     setIsExporting(true);
@@ -150,11 +282,33 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#020617] text-white flex flex-col">
-      <Navbar onExport={handleExport} onExportAll={handleExportAll} isExporting={isExporting} />
+      {/* Top Microsoft PowerPoint-Style Ribbon Bar */}
+      <Ribbon
+        onCommand={executeCommand}
+        onAddSlide={(tmplId) => {
+          const tmpl = SLIDE_TEMPLATES.find(t => t.id === tmplId) || SLIDE_TEMPLATES[0];
+          addSlideWithTemplate(tmpl.code);
+        }}
+        hasElementSelected={hasElementSelected}
+        onExport={handleExport}
+        onExportAll={handleExportAll}
+        isExporting={isExporting}
+        isSidebarCollapsed={isSidebarCollapsed}
+        onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        isCopilotOpen={isAIDrawerOpen}
+        onToggleCopilot={() => setIsAIDrawerOpen(!isAIDrawerOpen)}
+        activeSlideId={activeSlideId}
+        showGridlines={showGridlines}
+        onToggleGridlines={() => setShowGridlines(!showGridlines)}
+        onApplyBackgroundToAll={applyActiveBackgroundToAll}
+      />
       
-      <div className="flex-1 flex pt-20 overflow-hidden h-[calc(100vh-80px)]">
+      {/* 3-Section Workspace layout: Navigator - Canvas Workspace - AI Copilot Sidebar */}
+      <div className="flex-1 flex pt-28 overflow-hidden h-[calc(100vh-112px)]">
         {/* Left Sidebar - Slide Navigator */}
-        <aside className="w-64 bg-[#090d16] border-r border-slate-800/80 flex flex-col select-none">
+        <aside className={`bg-[#090d16] border-r border-slate-800/85 flex flex-col select-none transition-all duration-300 ease-in-out shrink-0 ${
+          isSidebarCollapsed ? 'w-0 border-r-0 overflow-hidden' : 'w-64'
+        }`}>
           <div className="p-4 border-b border-slate-850 flex items-center justify-between">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">Slides Navigator</span>
             <span className="text-xs font-bold text-indigo-400 font-mono bg-indigo-500/10 px-2 py-0.5 rounded-full">
@@ -227,18 +381,18 @@ const App: React.FC = () => {
             })}
           </div>
           
-          {/* Bottom Actions - Add Slide */}
+          {/* Bottom Actions - Choose layout templates */}
           <div className="p-4 border-t border-slate-850">
             <button
               onClick={() => setShowTemplateModal(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-sm text-white transition-all shadow-lg shadow-indigo-500/10 active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 hover:bg-slate-800 rounded-xl font-bold text-xs text-slate-355 border border-slate-800 transition-all active:scale-[0.98]"
             >
-              <Plus className="w-4 h-4" /> Add Slide
+              <Plus className="w-3.5 h-3.5" /> Choose Layout
             </button>
           </div>
         </aside>
 
-        {/* Right Work Area */}
+        {/* Right Work Area (Canvas Editor) */}
         <main className="flex-1 overflow-y-auto bg-[#040815] bg-grid-pattern p-6 flex flex-col gap-6 relative">
           {error && (
             <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 flex items-center gap-3">
@@ -254,6 +408,7 @@ const App: React.FC = () => {
                 slide={slide}
                 index={index}
                 isActive={slide.id === activeSlideId}
+                showGridlines={showGridlines}
                 onRemove={() => deleteSlide(slide.id)}
                 onChange={(code) => updateSlideCode(slide.id, code)}
                 onRegisterRef={(ref) => ref ? slideRefs.current.set(slide.id, ref) : slideRefs.current.delete(slide.id)}
@@ -261,6 +416,18 @@ const App: React.FC = () => {
             ))}
           </div>
         </main>
+
+        {/* Right Sidebar - AI Copilot Docked Panel */}
+        {isAIDrawerOpen && (
+          <AIAssistantDrawer
+            isOpen={isAIDrawerOpen}
+            onClose={() => setIsAIDrawerOpen(false)}
+            onApplySlide={handleApplySlide}
+            currentSlideCode={activeSlide?.code}
+            config={aiConfig}
+            onConfigChange={setAiConfig}
+          />
+        )}
       </div>
 
       {/* Template Selection Modal */}

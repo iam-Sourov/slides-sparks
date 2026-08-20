@@ -738,6 +738,30 @@ const captureAsImage = async (iframe: HTMLIFrameElement, transparentText = false
     walk(root);
   }
 
+  // Swap text gradient elements (bg-clip-text text-transparent) to solid text colors temporarily
+  const gradientTexts = Array.from(root.querySelectorAll('.bg-clip-text, [style*="background-clip: text"]'));
+  const originalGradientStates = gradientTexts.map((elNode) => {
+    const el = elNode as HTMLElement;
+    const originalClassName = el.className;
+    const originalCssText = el.style.cssText;
+
+    // Detect if we should use a dark text fallback
+    let fallbackColor = '#ffffff';
+    if (el.className.includes('from-black') || el.className.includes('from-slate-900') || el.className.includes('from-slate-800') || el.className.includes('from-zinc-900') || el.className.includes('from-gray-900')) {
+      fallbackColor = '#0f172a';
+    }
+
+    el.classList.remove('bg-clip-text', 'text-transparent');
+    
+    // Override both background gradients and text transparent fills using !important declarations
+    el.style.setProperty('background', 'transparent', 'important');
+    el.style.setProperty('background-image', 'none', 'important');
+    el.style.setProperty('color', fallbackColor, 'important');
+    el.style.setProperty('-webkit-text-fill-color', fallbackColor, 'important');
+
+    return { el, originalClassName, originalCssText };
+  });
+
   // Pre-process images to base64 to avoid CORS issues in html2canvas
   const images = Array.from(doc.querySelectorAll('img')).filter(img => !img.src.startsWith('data:'));
   await Promise.all(images.map(async (img) => {
@@ -785,6 +809,11 @@ const captureAsImage = async (iframe: HTMLIFrameElement, transparentText = false
       parent.insertBefore(icon, nextSibling);
       parent.removeChild(img);
     }
+  });
+
+  originalGradientStates.forEach(({ el, originalClassName, originalCssText }) => {
+    el.className = originalClassName;
+    el.style.cssText = originalCssText;
   });
 
   if (transparentText) {

@@ -1,21 +1,21 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import DOMPurify from 'dompurify';
-import VisualToolbar from './VisualToolbar';
 
 interface PreviewFrameProps {
   code: string;
   isVisualEdit?: boolean;
+  showGridlines?: boolean;
   onCodeChange?: (newCode: string) => void;
   onRegisterRef?: (ref: HTMLIFrameElement | null) => void;
 }
 
-const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false, onCodeChange, onRegisterRef }) => {
+const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false, showGridlines = false, onCodeChange, onRegisterRef }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [isReady, setIsReady] = useState(false);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [hasElementSelected, setHasElementSelected] = useState(false);
 
   const WIDTH = 1280;
   const HEIGHT = 720;
@@ -35,7 +35,6 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Sync visual changes back to the editor
   const [srcDoc, setSrcDoc] = useState('');
   const lastSyncedHTML = useRef(code);
 
@@ -48,6 +47,8 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
         setSelectedImageId(event.data.id);
       } else if (event.data?.type === 'IMAGE_DESELECTED') {
         setSelectedImageId(null);
+      } else if (event.data?.type === 'ELEMENT_SELECTED') {
+        setHasElementSelected(event.data.hasSelection);
       }
     };
     window.addEventListener('message', handleMessage);
@@ -105,7 +106,6 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
   };
 
   useEffect(() => {
-    // Only update srcDoc if the code has changed from something OTHER than our own sync
     if (code !== lastSyncedHTML.current || !isReady) {
       const sanitizedHTML = DOMPurify.sanitize(code, {
         ADD_TAGS: [
@@ -126,7 +126,7 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
         <html lang="en">
           <head>
             <meta charset="utf-8">
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Playfair+Display:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;705&family=Outfit:wght@400;707&family=Playfair+Display:wght@400;707&family=JetBrains+Mono:wght@400;707&display=swap" rel="stylesheet">
             <script src="https://cdn.tailwindcss.com"></script>
             <script src="https://unpkg.com/lucide@latest"></script>
             <style>
@@ -140,28 +140,51 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
                 width: ${WIDTH}px; height: ${HEIGHT}px;
                 position: relative; overflow: hidden; box-sizing: border-box;
                 outline: none;
+                ${showGridlines ? `
+                  background-image: radial-gradient(rgba(148, 163, 184, 0.15) 1px, transparent 0);
+                  background-size: 24px 24px;
+                ` : ''}
               }
               ${isVisualEdit ? `
-                #capture-root *:not(div):not(section):not(img):hover { 
-                  outline: 1px dashed rgba(99, 102, 241, 0.8) !important; 
-                  outline-offset: 4px;
-                  cursor: text; 
+                /* direct children of slide-container represent canvas layout elements */
+                .slide-container > *:not(style):not(script):not(#canvas-selection-overlay) {
+                  transition: outline 0.15s, outline-offset 0.15s;
                 }
-                #capture-root div:hover {
-                  outline: 1px dotted rgba(99, 102, 241, 0.3) !important;
-                }
-                #capture-root *:focus { 
-                  outline: 2px solid #6366f1 !important; 
-                  background: rgba(99, 102, 241, 0.05);
-                }
-                #capture-root img:hover {
-                  outline: 2px solid #6366f1 !important;
+                .slide-container > *:not(style):not(script):not(#canvas-selection-overlay):hover {
+                  outline: 2.5px dashed rgba(99, 102, 241, 0.6) !important;
+                  outline-offset: 2px;
                   cursor: pointer;
                 }
-                #capture-root img.selected {
-                  outline: 4px solid #6366f1 !important;
-                  outline-offset: 2px;
+                #capture-root *:focus { 
+                  outline: none !important;
+                  background: rgba(99, 102, 241, 0.02);
                 }
+                #canvas-selection-overlay {
+                  position: absolute;
+                  border: 2.5px solid #4f46e5;
+                  pointer-events: none;
+                  z-index: 99999;
+                  box-sizing: border-box;
+                }
+                .canvas-resize-handle {
+                  position: absolute;
+                  width: 12px;
+                  height: 12px;
+                  background-color: white;
+                  border: 2.5px solid #4f46e5;
+                  border-radius: 50%;
+                  pointer-events: auto;
+                  box-sizing: border-box;
+                  z-index: 100000;
+                  transition: transform 0.1s;
+                }
+                .canvas-resize-handle:hover {
+                  transform: scale(1.25);
+                }
+                .handle-tl { top: -6px; left: -6px; cursor: nwse-resize; }
+                .handle-tr { top: -6px; right: -6px; cursor: nesw-resize; }
+                .handle-bl { bottom: -6px; left: -6px; cursor: nesw-resize; }
+                .handle-br { bottom: -6px; right: -6px; cursor: nwse-resize; }
               ` : ''}
               img { max-width: 100%; height: auto; transition: all 0.2s; }
               ul { list-style-type: disc; padding-left: 2rem; }
@@ -188,9 +211,12 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
                 initIcons();
                 clearTimeout(timeout);
                 timeout = setTimeout(() => {
+                  // Clone root to strip out temporary canvas editor helpers
+                  const clone = root.cloneNode(true);
+                  clone.querySelectorAll('#canvas-selection-overlay, .canvas-edit-overlay, .selected-canvas-item').forEach(el => el.remove());
                   window.parent.postMessage({
                     type: 'SYNC_HTML',
-                    html: root.innerHTML
+                    html: clone.innerHTML
                   }, '*');
                 }, 400);
               };
@@ -208,10 +234,10 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
               let savedRange = null;
               document.addEventListener('selectionchange', () => {
                 const sel = window.getSelection();
-                if (sel.rangeCount > 0) {
+                if (sel && sel.rangeCount > 0) {
                   const range = sel.getRangeAt(0);
                   if (root.contains(range.commonAncestorContainer)) {
-                    savedRange = range;
+                    savedRange = range.cloneRange();
                   }
                 }
               });
@@ -226,10 +252,159 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
                     sel.addRange(savedRange);
                   }
                   
-                  // For robust highlight formatting across browsers
-                  const cmd = command === 'hiliteColor' ? 'backColor' : command;
-                  
-                  document.execCommand(cmd, false, value);
+                  // PowerPoint-style commands and operations
+                  if (command === 'insertTextBox') {
+                    const div = document.createElement('div');
+                    div.style.position = 'absolute';
+                    div.style.left = '100px';
+                    div.style.top = '100px';
+                    div.style.width = '300px';
+                    div.style.minHeight = '50px';
+                    div.style.padding = '8px';
+                    div.style.boxSizing = 'border-box';
+                    div.style.zIndex = '10';
+                    
+                    const bgStyle = window.getComputedStyle(slideContainer);
+                    const isDark = bgStyle.backgroundColor.includes('rgba(0, 0, 0, 0)') || 
+                                   bgStyle.backgroundImage.includes('linear-gradient') || 
+                                   (parseFloat(bgStyle.backgroundColor.match(/\\d+/g)?.[0] || '255') < 100);
+                    div.style.color = isDark ? '#ffffff' : '#0f172a';
+                    div.style.fontSize = '24px';
+                    div.style.fontFamily = 'Inter, sans-serif';
+                    div.innerHTML = 'Double click to edit text';
+                    slideContainer.appendChild(div);
+                    
+                    selectedElement = div;
+                    updateOverlay();
+                    window.parent.postMessage({ type: 'ELEMENT_SELECTED', hasSelection: true }, '*');
+                  } else if (command === 'insertShape') {
+                    const div = document.createElement('div');
+                    div.style.position = 'absolute';
+                    div.style.left = '150px';
+                    div.style.top = '150px';
+                    div.style.width = '200px';
+                    div.style.height = '150px';
+                    div.style.backgroundColor = '#4f46e5';
+                    div.style.boxSizing = 'border-box';
+                    div.style.zIndex = '5';
+                    
+                    if (value === 'circle') {
+                      div.style.borderRadius = '50%';
+                      div.style.width = '150px';
+                      div.style.height = '150px';
+                    } else if (value === 'rectangle') {
+                      div.style.borderRadius = '8px';
+                    } else if (value === 'card') {
+                      div.className = 'card p-6 bg-slate-800/80 border border-slate-700 backdrop-blur rounded-2xl shadow-xl';
+                      div.style.color = '#ffffff';
+                      div.style.width = '350px';
+                      div.style.height = '200px';
+                      div.innerHTML = '<h3 class="text-xl font-bold mb-2">Card Title</h3><p class="text-slate-400 text-sm">Add details...</p>';
+                    }
+                    slideContainer.appendChild(div);
+                    
+                    selectedElement = div;
+                    updateOverlay();
+                    window.parent.postMessage({ type: 'ELEMENT_SELECTED', hasSelection: true }, '*');
+                  } else if (command === 'insertIcon') {
+                    const i = document.createElement('i');
+                    i.dataset.lucide = value;
+                    i.className = 'w-16 h-16 text-indigo-500';
+                    i.style.position = 'absolute';
+                    i.style.left = '200px';
+                    i.style.top = '200px';
+                    i.style.width = '64px';
+                    i.style.height = '64px';
+                    i.style.zIndex = '10';
+                    slideContainer.appendChild(i);
+                    
+                    selectedElement = i;
+                    updateOverlay();
+                    window.parent.postMessage({ type: 'ELEMENT_SELECTED', hasSelection: true }, '*');
+                  } else if (command === 'bringToFront') {
+                    if (selectedElement) {
+                      const siblings = Array.from(selectedElement.parentNode.children).filter(el => el !== overlay);
+                      let maxZ = 0;
+                      siblings.forEach(el => {
+                        const z = parseInt(window.getComputedStyle(el).zIndex) || 0;
+                        if (z > maxZ && z < 99999) maxZ = z;
+                      });
+                      selectedElement.style.zIndex = maxZ + 1;
+                    }
+                  } else if (command === 'sendToBack') {
+                    if (selectedElement) {
+                      const siblings = Array.from(selectedElement.parentNode.children).filter(el => el !== overlay);
+                      let minZ = 0;
+                      siblings.forEach(el => {
+                        const z = parseInt(window.getComputedStyle(el).zIndex) || 0;
+                        if (z < minZ) minZ = z;
+                      });
+                      selectedElement.style.zIndex = Math.max(0, minZ - 1);
+                    }
+                  } else if (command === 'duplicate') {
+                    if (selectedElement) {
+                      const clone = selectedElement.cloneNode(true);
+                      clone.classList.remove('selected-canvas-item');
+                      const left = (parseFloat(clone.style.left) || 0) + 20;
+                      const top = (parseFloat(clone.style.top) || 0) + 20;
+                      clone.style.left = left + 'px';
+                      clone.style.top = top + 'px';
+                      selectedElement.parentNode.appendChild(clone);
+                      selectedElement = clone;
+                      updateOverlay();
+                      window.parent.postMessage({ type: 'ELEMENT_SELECTED', hasSelection: true }, '*');
+                    }
+                  } else if (command === 'deleteElement') {
+                    if (selectedElement) {
+                      selectedElement.remove();
+                      selectedElement = null;
+                      updateOverlay();
+                      window.parent.postMessage({ type: 'ELEMENT_SELECTED', hasSelection: false }, '*');
+                    }
+                   } else if (command === 'setElementStyle') {
+                    const data = JSON.parse(value);
+                    const isBgProp = data.property === 'background' || data.property === 'backgroundImage' || data.property === 'backgroundColor';
+                    const target = isBgProp ? slideContainer : (selectedElement || slideContainer);
+                    if (target) {
+                      target.style[data.property] = data.value;
+                      if (selectedElement) updateOverlay();
+                    }
+                  } else {
+                    const cmd = command === 'hiliteColor' ? 'backColor' : command;
+                    
+                    // Format selectedElement properties if active and no text selection highlighted
+                    const activeSel = window.getSelection();
+                    const hasTextSelection = activeSel && activeSel.toString().length > 0;
+                    
+                    if (selectedElement && !hasTextSelection) {
+                      if (cmd === 'bold') {
+                        selectedElement.style.fontWeight = selectedElement.style.fontWeight === 'bold' ? 'normal' : 'bold';
+                      } else if (cmd === 'italic') {
+                        selectedElement.style.fontStyle = selectedElement.style.fontStyle === 'italic' ? 'normal' : 'italic';
+                      } else if (cmd === 'underline') {
+                        selectedElement.style.textDecoration = selectedElement.style.textDecoration === 'underline' ? 'none' : 'underline';
+                      } else if (cmd === 'strikeThrough') {
+                        selectedElement.style.textDecoration = selectedElement.style.textDecoration === 'line-through' ? 'none' : 'line-through';
+                      } else if (cmd === 'foreColor') {
+                        selectedElement.style.color = value;
+                      } else if (cmd === 'fontName') {
+                        selectedElement.style.fontFamily = value;
+                      } else if (cmd === 'fontSize') {
+                        const sizes = { '1': '12px', '2': '14px', '3': '16px', '4': '20px', '5': '24px', '6': '32px', '7': '48px' };
+                        selectedElement.style.fontSize = sizes[value] || value;
+                      } else if (cmd === 'justifyLeft' || cmd === 'justifyCenter' || cmd === 'justifyRight') {
+                        const aligns = { 'justifyLeft': 'left', 'justifyCenter': 'center', 'justifyRight': 'right' };
+                        selectedElement.style.textAlign = aligns[cmd];
+                      } else if (cmd === 'insertUnorderedList') {
+                        selectedElement.innerHTML = '<ul><li>' + selectedElement.innerHTML + '</li></ul>';
+                      } else {
+                        document.execCommand(cmd, false, value);
+                      }
+                      if (selectedElement) updateOverlay();
+                    } else {
+                      document.execCommand(cmd, false, value);
+                    }
+                  }
                   sync();
                 } else if (type === 'UPDATE_IMAGE') {
                   const img = document.getElementById(id);
@@ -264,6 +439,235 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
                   if (link) e.preventDefault();
                 }
               });
+
+              ${isVisualEdit ? `
+              // Canva-like canvas overlay resizer and positioning editor
+              const slideContainer = root.querySelector('.slide-container') || root;
+              let selectedElement = null;
+              let dragTarget = null;
+              let resizeMode = null; // 'tl' | 'tr' | 'bl' | 'br'
+
+              let startX, startY;
+              let startLeft, startTop;
+              let startWidth, startHeight;
+              let isDraggingInitiated = false;
+
+              // Dynamically build Canva Selection Overlay Overlay layer inside the Slide Container
+              const overlay = document.createElement('div');
+              overlay.id = 'canvas-selection-overlay';
+              overlay.className = 'canvas-edit-overlay';
+              overlay.style.display = 'none';
+
+              const positions = ['tl', 'tr', 'bl', 'br'];
+              positions.forEach(pos => {
+                const handle = document.createElement('div');
+                handle.className = 'canvas-resize-handle handle-' + pos + ' canvas-edit-overlay';
+                handle.dataset.handle = pos;
+                overlay.appendChild(handle);
+              });
+              slideContainer.appendChild(overlay);
+
+              // Helper function to update selector overlay box relative to selectedElement bounds
+              const updateOverlay = () => {
+                if (!selectedElement || !selectedElement.parentNode) {
+                  overlay.style.display = 'none';
+                  return;
+                }
+                const rect = selectedElement.getBoundingClientRect();
+                const parentRect = slideContainer.getBoundingClientRect();
+
+                overlay.style.display = 'block';
+                overlay.style.left = (rect.left - parentRect.left) + 'px';
+                overlay.style.top = (rect.top - parentRect.top) + 'px';
+                overlay.style.width = rect.width + 'px';
+                overlay.style.height = rect.height + 'px';
+              };
+
+              // Walk up to find logical content elements (cards, headings, paragraphs, buttons, lists)
+              const getLogicalElement = (el) => {
+                let target = el;
+                const isLogical = (node) => {
+                  const tag = node.tagName.toLowerCase();
+                  if (tag === 'img' || tag === 'svg' || tag === 'button' || tag === 'table' || tag === 'li' || tag === 'a') return true;
+                  if (node.classList.contains('card') || node.classList.contains('item') || node.classList.contains('badge') || node.classList.contains('section-tag')) return true;
+                  if (/^h[1-6]$/.test(tag) || tag === 'p' || tag === 'blockquote') return true;
+                  if (tag === 'div' && !node.classList.contains('slide-container') && !node.classList.contains('comparison-grid') && !node.classList.contains('grid') && !node.classList.contains('accent-ring') && !node.classList.contains('accent-ring-2') && !node.classList.contains('canvas-edit-overlay') && !node.classList.contains('canvas-resize-handle')) {
+                    return true;
+                  }
+                  return false;
+                };
+
+                while (target && target.parentNode !== slideContainer && target.parentNode !== root && target.parentNode !== document.body) {
+                  if (isLogical(target)) return target;
+                  target = target.parentNode;
+                }
+                return (target !== slideContainer && target !== root && target !== document.body) ? target : null;
+              };
+
+              document.addEventListener('mousedown', (e) => {
+                // Ignore right clicks or clicks on handles/overlay
+                if (e.button !== 0) return;
+
+                // Clicked a corner handle
+                if (e.target.classList.contains('canvas-resize-handle')) {
+                  resizeMode = e.target.dataset.handle;
+                  startX = e.clientX;
+                  startY = e.clientY;
+
+                  const rect = selectedElement.getBoundingClientRect();
+                  const parentRect = slideContainer.getBoundingClientRect();
+
+                  startLeft = parseFloat(selectedElement.style.left) || (rect.left - parentRect.left);
+                  startTop = parseFloat(selectedElement.style.top) || (rect.top - parentRect.top);
+                  startWidth = rect.width;
+                  startHeight = rect.height;
+
+                  e.stopPropagation();
+                  e.preventDefault();
+                  return;
+                }
+
+                // If user clicked inside contenteditable text and is already active, ignore so cursor works
+                const isTextEditing = document.activeElement === e.target && e.target.tagName !== 'IMG' && e.target.tagName !== 'SVG';
+                
+                // Identify logical component target
+                const target = getLogicalElement(e.target);
+                if (!target) {
+                  // Clicked off any logical item -> Deselect
+                  if (e.target === root || e.target === document.body || e.target === slideContainer) {
+                    selectedElement = null;
+                    updateOverlay();
+                    window.parent.postMessage({ type: 'ELEMENT_SELECTED', hasSelection: false }, '*');
+                  }
+                  return;
+                }
+
+                selectedElement = target;
+                updateOverlay();
+                window.parent.postMessage({ type: 'ELEMENT_SELECTED', hasSelection: true }, '*');
+
+                if (isTextEditing) return; // Allow placing cursors inside the active element
+
+                dragTarget = target;
+                startX = e.clientX;
+                startY = e.clientY;
+
+                const rect = dragTarget.getBoundingClientRect();
+                const parentRect = slideContainer.getBoundingClientRect();
+
+                startLeft = parseFloat(dragTarget.style.left) || (rect.left - parentRect.left);
+                startTop = parseFloat(dragTarget.style.top) || (rect.top - parentRect.top);
+                startWidth = rect.width;
+                startHeight = rect.height;
+
+                isDraggingInitiated = false;
+              });
+
+              document.addEventListener('mousemove', (e) => {
+                // 1. Handling Corners resizing mode
+                if (resizeMode && selectedElement) {
+                  const dx = e.clientX - startX;
+                  const dy = e.clientY - startY;
+
+                  e.preventDefault();
+
+                  if (resizeMode === 'br') {
+                    selectedElement.style.width = Math.max(20, startWidth + dx) + 'px';
+                    selectedElement.style.height = Math.max(20, startHeight + dy) + 'px';
+                  } else if (resizeMode === 'bl') {
+                    const newW = Math.max(20, startWidth - dx);
+                    if (newW > 20) {
+                      selectedElement.style.width = newW + 'px';
+                      selectedElement.style.left = (startLeft + dx) + 'px';
+                    }
+                    selectedElement.style.height = Math.max(20, startHeight + dy) + 'px';
+                  } else if (resizeMode === 'tr') {
+                    selectedElement.style.width = Math.max(20, startWidth + dx) + 'px';
+                    const newH = Math.max(20, startHeight - dy);
+                    if (newH > 20) {
+                      selectedElement.style.height = newH + 'px';
+                      selectedElement.style.top = (startTop + dy) + 'px';
+                    }
+                  } else if (resizeMode === 'tl') {
+                    const newW = Math.max(20, startWidth - dx);
+                    if (newW > 20) {
+                      selectedElement.style.width = newW + 'px';
+                      selectedElement.style.left = (startLeft + dx) + 'px';
+                    }
+                    const newH = Math.max(20, startHeight - dy);
+                    if (newH > 20) {
+                      selectedElement.style.height = newH + 'px';
+                      selectedElement.style.top = (startTop + dy) + 'px';
+                    }
+                  }
+
+                  updateOverlay();
+                  sync();
+                  return;
+                }
+
+                // 2. Handling Drag Move Mode
+                if (!dragTarget) return;
+
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+
+                if (!isDraggingInitiated) {
+                  const dist = Math.hypot(dx, dy);
+                  if (dist > 5) {
+                    isDraggingInitiated = true;
+
+                    // Convert item layout styles to absolute
+                    const style = window.getComputedStyle(dragTarget);
+                    if (style.position !== 'absolute') {
+                      dragTarget.style.position = 'absolute';
+                      dragTarget.style.left = startLeft + 'px';
+                      dragTarget.style.top = startTop + 'px';
+                      dragTarget.style.width = startWidth + 'px';
+                      dragTarget.style.height = startHeight + 'px';
+                      dragTarget.style.margin = '0';
+                    }
+                  }
+                }
+
+                if (isDraggingInitiated) {
+                  e.preventDefault();
+                  
+                  dragTarget.style.left = (startLeft + dx) + 'px';
+                  dragTarget.style.top = (startTop + dy) + 'px';
+                  
+                  updateOverlay();
+                  sync();
+                }
+              });
+
+              document.addEventListener('mouseup', (e) => {
+                if (isDraggingInitiated || resizeMode) {
+                  e.preventDefault();
+                }
+                dragTarget = null;
+                resizeMode = null;
+                isDraggingInitiated = false;
+              });
+
+              // Canva-style Backspace/Delete keyboard element removal
+              document.addEventListener('keydown', (e) => {
+                if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElement) {
+                  // Do not delete if editing inside input or editing paragraph characters
+                  const active = document.activeElement;
+                  const isTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.getAttribute('contenteditable') === 'true');
+                  
+                  if (!isTyping) {
+                    selectedElement.remove();
+                    selectedElement = null;
+                    updateOverlay();
+                    window.parent.postMessage({ type: 'ELEMENT_SELECTED', hasSelection: false }, '*');
+                    sync();
+                    e.preventDefault();
+                  }
+                }
+              });
+              ` : ''}
             </script>
           </body>
         </html>
@@ -273,22 +677,8 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
   }, [code, isVisualEdit, isReady]);
 
   return (
-    <div className="flex flex-col gap-6">
-      {isVisualEdit && (
-        <div className="flex justify-center animate-in fade-in slide-in-from-top-4 duration-500">
-          <VisualToolbar 
-            onCommand={executeCommand}
-            onInsertImage={handleInsertImage}
-            onChangeImage={handleChangeImage}
-            onSetImageWidth={handleSetImageWidth}
-            onDeleteImage={handleDeleteImage}
-            selectedImage={!!selectedImageId}
-          />
-        </div>
-      )}
-      
-      <div 
-        ref={containerRef}
+    <div 
+      ref={containerRef}
         className="relative bg-[#0f172a] rounded-2xl shadow-2xl overflow-hidden border border-slate-800 transition-all duration-300"
         style={{ width: '100%', paddingTop: `${(1 / ASPECT_RATIO) * 100}%` }}
       >
@@ -320,7 +710,6 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({ code, isVisualEdit = false,
           </div>
         )}
       </div>
-    </div>
   );
 };
 
